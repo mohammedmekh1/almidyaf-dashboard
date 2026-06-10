@@ -1,0 +1,95 @@
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap');
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background:   var(--background);
+  --color-foreground:   var(--foreground);
+  --color-card:         var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover:      var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary:      var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary:    var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted:        var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent:       var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive:  var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border:       var(--border);
+  --color-input:        var(--input);
+  --color-ring:         var(--ring);
+  --color-sidebar:      var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+:root {
+  /* ألوان لحوم المضياف */
+  --primary:            #8B1E1E;    /* أحمر داكن - اللحم */
+  --primary-foreground: #FAF7F2;
+  --accent:             #C9A227;    /* ذهبي */
+  --accent-foreground:  #FFFFFF;
+
+  --background:         #FAF7F2;    /* كريمي فاتح */
+  --foreground:         #1A1A1A;
+  --card:               #FFFFFF;
+  --card-foreground:    #1A1A1A;
+  --popover:            #FFFFFF;
+  --popover-foreground: #1A1A1A;
+  --secondary:          #F0EDE8;
+  --secondary-foreground: #4A4A4A;
+  --muted:              #F5F2EE;
+  --muted-foreground:   #6B6B6B;
+  --destructive:        #C0392B;
+  --destructive-foreground: #FFFFFF;
+  --border:             #E8E3DC;
+  --input:              #F5F2EE;
+  --ring:               #8B1E1E;
+  --radius:             0.65rem;
+
+  /* Sidebar */
+  --sidebar:            #1C1410;    /* بني داكن */
+  --sidebar-foreground: #F5F0E8;
+  --sidebar-primary:    #C9A227;    /* ذهبي */
+  --sidebar-primary-foreground: #1C1410;
+  --sidebar-accent:     #2A1E18;
+  --sidebar-accent-foreground: #F5F0E8;
+  --sidebar-border:     #2E2218;
+  --sidebar-ring:       #C9A227;
+}
+
+/* خط Cairo لكل شيء */
+* { font-family: 'Cairo', sans-serif; }
+
+html { direction: rtl; }
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Scrollbar مخصّص */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--muted); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: #C9A227; }
+
+/* كلاس مساعد للأرقام */
+.font-cairo { font-family: 'Cairo', sans-serif; }
+.font-num   { font-variant-numeric: tabular-nums; }
