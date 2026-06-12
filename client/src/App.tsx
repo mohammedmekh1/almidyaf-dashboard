@@ -16,33 +16,29 @@ import Content from "./pages/Content";
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={Home} />
-      <Route path="/leads" component={Leads} />
-      <Route path="/orders" component={Orders} />
-      <Route path="/tasks" component={Tasks} />
-      <Route path="/delivery" component={Delivery} />
-      <Route path="/customer-service" component={CustomerService} />
-      <Route path="/content" component={Content} />
-      <Route path="/404" component={NotFound} />
+      <Route path="/"                  component={Home} />
+      <Route path="/leads"             component={Leads} />
+      <Route path="/orders"            component={Orders} />
+      <Route path="/tasks"             component={Tasks} />
+      <Route path="/delivery"          component={Delivery} />
+      <Route path="/customer-service"  component={CustomerService} />
+      <Route path="/content"           component={Content} />
       <Route component={NotFound} />
     </Switch>
   );
 }
 
-function App() {
+export default function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider defaultTheme="light">
         <SheetsProvider>
           <TooltipProvider>
-          <Toaster position="top-center" dir="rtl" />
-          <Router />
-        </TooltipProvider>
-          </SheetsProvider>
+            <Toaster position="top-center" dir="rtl" />
+            <Router />
+          </TooltipProvider>
+        </SheetsProvider>
       </ThemeProvider>
     </ErrorBoundary>
   );
 }
-
-export default App;
-

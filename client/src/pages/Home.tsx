@@ -1,87 +1,85 @@
+/**
+ * Dashboard.tsx — لوحة إحصائيات لحوم المضياف
+ * مربوطة بـ Google Sheets عبر useGoogleSheets hook
+ */
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
-  AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+  AreaChart, Area,
+  BarChart, Bar,
+  PieChart, Pie, Cell,
+  FunnelChart, Funnel, LabelList,
+  XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer,
 } from "recharts";
 import {
-  Users, TrendingUp, ShoppingCart, Truck, RefreshCw,
-  Zap, FileText, MessageSquare, Star, AlertCircle,
-  CheckCircle, Clock, Loader2, Package, ChevronUp, ChevronDown,
+  Users, TrendingUp, ShoppingCart, Truck,
+  RefreshCw, Zap, FileText, MessageSquare,
+  Star, AlertCircle, CheckCircle, Clock,
+  Loader2,
 } from "lucide-react";
 import { useSheets } from "@/contexts/SheetsContext";
-import DashboardLayout from "@/components/DashboardLayout";
 import type { Lead, Order, SalesTask, CustomerService, Content } from "@/hooks/useGoogleSheets";
 
+// ─── ثوابت ───────────────────────────────────────────────────────────────────
+
 const PRODUCT_LABELS: Record<string, string> = {
-  full_carcass:      "ذبيحة كاملة",
-  half_carcass:      "نصف ذبيحة",
-  quarter_carcass:   "ربع ذبيحة",
-  live_sheep:        "خروف حي",
-  kg_meat:           "لحم بالكيلو",
-  slaughter_service: "خدمة الذبح",
-  events_catering:   "خدمة الحفلات",
-  eid_adha:          "أضحية العيد",
-  bulk_order:        "طلب بالجملة",
+  full_carcass:     "ذبيحة كاملة",
+  half_carcass:     "نصف ذبيحة",
+  quarter_carcass:  "ربع ذبيحة",
+  live_sheep:       "خروف حي",
+  kg_meat:          "لحم بالكيلو",
+  slaughter_service:"خدمة الذبح",
+  events_catering:  "خدمة الحفلات",
+  eid_adha:         "أضحية العيد",
 };
 
 const CATEGORY_COLORS: Record<string, string> = {
   hot:  "#8B1E1E",
-  warm: "#C9A227",
+  warm: "#E08A1E",
   cool: "#5B7A99",
-  cold: "#9CA3AF",
+  cold: "#6B6B6B",
 };
 
-const CATEGORY_LABELS: Record<string, string> = {
-  hot:  "ساخن",
-  warm: "دافئ",
-  cool: "بارد",
-  cold: "بارد جداً",
+const formatDate = (iso: string) => {
+  if (!iso) return "—";
+  try {
+    return new Date(iso).toLocaleDateString("ar-SA", {
+      year: "numeric", month: "long", day: "numeric",
+    });
+  } catch {
+    return iso;
+  }
 };
 
-const fmt = (n: number) => n.toLocaleString("ar-SA");
-const fmtTime = (iso: string) => {
-  try { return new Date(iso).toLocaleTimeString("ar-SA", { hour: "2-digit", minute: "2-digit" }); }
-  catch { return iso; }
-};
-const fmtDate = (iso: string) => {
-  try { return new Date(iso).toLocaleDateString("ar-SA", { month: "short", day: "numeric" }); }
-  catch { return iso; }
-};
+// ─── بطاقة KPI ───────────────────────────────────────────────────────────────
 
-// ─── KPI Card ─────────────────────────────────────────────────────────────────
-
-function KPI({
-  icon, title, value, sub, color = "#8B1E1E", trend,
+function KPICard({
+  icon, title, value, subtitle, color = "#8B1E1E",
 }: {
   icon: React.ReactNode;
   title: string;
   value: string | number;
-  sub?: string;
+  subtitle?: string;
   color?: string;
-  trend?: "up" | "down" | "neutral";
 }) {
   return (
-    <Card className="border-border/60 shadow-sm hover:shadow-md transition-all duration-200">
-      <CardContent className="p-5">
+    <Card className="border-border/50 shadow-sm hover:shadow-md transition-shadow duration-200">
+      <CardContent className="p-6">
         <div className="flex items-start gap-3">
-          <div className="p-2.5 rounded-xl shrink-0" style={{ background: color + "18" }}>
+          <div className="p-2 rounded-lg" style={{ background: color + "18" }}>
             <div style={{ color }}>{icon}</div>
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-xs text-muted-foreground font-semibold truncate">{title}</p>
-            <div className="flex items-end gap-2 mt-1">
-              <span className="text-2xl font-black leading-none font-num" style={{ color }}>
-                {value}
-              </span>
-              {trend && (
-                <span className={`text-xs mb-0.5 ${trend === "up" ? "text-green-600" : trend === "down" ? "text-red-500" : "text-muted-foreground"}`}>
-                  {trend === "up" ? <ChevronUp size={14} /> : trend === "down" ? <ChevronDown size={14} /> : null}
-                </span>
-              )}
-            </div>
-            {sub && <p className="text-xs text-muted-foreground mt-1 truncate">{sub}</p>}
+          <div className="flex-1">
+            <p className="text-sm text-muted-foreground font-cairo">{title}</p>
+            <p className="text-3xl font-bold text-foreground font-cairo mt-1" style={{ fontWeight: 800 }}>
+              {value}
+            </p>
+            {subtitle && (
+              <p className="text-xs text-muted-foreground mt-1 font-cairo">{subtitle}</p>
+            )}
           </div>
         </div>
       </CardContent>
@@ -89,468 +87,431 @@ function KPI({
   );
 }
 
-// ─── Loading / Error ──────────────────────────────────────────────────────────
+// ─── حالة التحميل والخطأ ─────────────────────────────────────────────────────
 
-function Loading() {
+function LoadingState() {
   return (
-    <DashboardLayout>
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="animate-spin size-10" style={{ color: "#8B1E1E" }} />
-          <p className="text-muted-foreground">جاري تحميل البيانات…</p>
-        </div>
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="flex flex-col items-center gap-4">
+        <Loader2 className="animate-spin size-10 text-primary" />
+        <p className="text-muted-foreground font-cairo text-lg">
+          جاري تحميل بيانات الشيت…
+        </p>
       </div>
-    </DashboardLayout>
+    </div>
   );
 }
 
-function ErrorView({ msg, retry }: { msg: string; retry: () => void }) {
+function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
   return (
-    <DashboardLayout>
-      <div className="min-h-screen flex items-center justify-center p-6">
-        <Card className="max-w-md w-full border-destructive/30">
-          <CardContent className="p-8 flex flex-col items-center gap-4 text-center">
-            <AlertCircle className="size-12 text-destructive" />
-            <div>
-              <p className="font-bold text-lg">تعذّر تحميل البيانات</p>
-              <p className="text-sm text-muted-foreground mt-2 leading-relaxed">{msg}</p>
-            </div>
-            <Button onClick={retry} variant="outline" className="gap-2">
-              <RefreshCw size={15} /> إعادة المحاولة
-            </Button>
-            <p className="text-xs text-muted-foreground">
-              تأكّد أن الشيت مشارك للعموم (Anyone with link → Viewer)
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    </DashboardLayout>
+    <div className="min-h-screen bg-background flex items-center justify-center p-8">
+      <Card className="max-w-lg w-full border-destructive/30">
+        <CardContent className="p-8 flex flex-col items-center gap-4 text-center">
+          <AlertCircle className="size-12 text-destructive" />
+          <div>
+            <p className="font-bold text-lg font-cairo text-foreground">تعذّر تحميل البيانات</p>
+            <p className="text-sm text-muted-foreground mt-2 font-cairo leading-relaxed">{message}</p>
+          </div>
+          <Button onClick={onRetry} className="font-cairo">
+            <RefreshCw className="size-4 ml-2" />
+            إعادة المحاولة
+          </Button>
+          <p className="text-xs text-muted-foreground font-cairo">
+            تأكد أن VITE_SHEETS_ID مضبوط وأن الشيت مشارك للعموم
+          </p>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 
-// ─── Category Badge ───────────────────────────────────────────────────────────
-
-function CatBadge({ cat }: { cat: string }) {
-  const c = CATEGORY_COLORS[cat] || "#9CA3AF";
-  return (
-    <span className="inline-block px-2 py-0.5 rounded text-xs font-bold text-white"
-          style={{ background: c }}>
-      {CATEGORY_LABELS[cat] || cat}
-    </span>
-  );
-}
-
-// ─── Main ─────────────────────────────────────────────────────────────────────
+// ─── المكوّن الرئيسي ──────────────────────────────────────────────────────────
 
 export default function Home() {
-  const [filter, setFilter] = useState<"today" | "week" | "month" | "all">("all");
+  const [dateFilter, setDateFilter] = useState<"today" | "week" | "month" | "all">("all");
+
   const { data, summary, loading, error, refetch } = useSheets();
 
-  if (loading) return <Loading />;
-  if (error)   return <ErrorView msg={error} retry={refetch} />;
+  if (loading) return <LoadingState />;
+  if (error)   return <ErrorState message={error} onRetry={refetch} />;
 
-  const now = new Date();
-  const withinMs = (iso: string, ms: number) => {
-    try { return (now.getTime() - new Date(iso).getTime()) < ms; }
-    catch { return false; }
-  };
-  const filterDate = (iso: string) => {
-    if (filter === "all" || !iso) return true;
-    if (filter === "today") return new Date(iso).toDateString() === now.toDateString();
-    if (filter === "week")  return withinMs(iso, 7  * 86400000);
-    if (filter === "month") return withinMs(iso, 30 * 86400000);
+
+  // ─── فلترة بالتاريخ ────────────────────────────────────────────────────────
+  const now   = new Date();
+  const filterByDate = (iso: string) => {
+    if (dateFilter === "all" || !iso) return true;
+    const d = new Date(iso);
+    if (dateFilter === "today") return d.toDateString() === now.toDateString();
+    if (dateFilter === "week")  return (now.getTime() - d.getTime()) < 7  * 86400000;
+    if (dateFilter === "month") return (now.getTime() - d.getTime()) < 30 * 86400000;
     return true;
   };
 
-  const fLeads  = data.leads.filter((l) => !l.is_demo && filterDate(l.created_at));
-  const fOrders = data.orders.filter((o) => filterDate(o.created_at));
+  const filteredLeads  = data.leads.filter((l) => !l.is_demo && filterByDate(l.created_at));
+  const filteredOrders = data.orders.filter((o) => filterByDate(o.created_at));
 
-  // رسوم بيانية
-  const catData = (["hot","warm","cool","cold"] as const)
-    .map((c) => ({ name: CATEGORY_LABELS[c], value: fLeads.filter((l) => l.category === c).length, fill: CATEGORY_COLORS[c] }))
-    .filter((d) => d.value > 0);
+  // ─── بيانات الرسوم البيانية ────────────────────────────────────────────────
 
-  const prodCount: Record<string, number> = {};
-  fLeads.forEach((l) => {
-    const label = PRODUCT_LABELS[l.detected_product] || l.detected_product || "غير محدد";
-    prodCount[label] = (prodCount[label] || 0) + 1;
+  // توزيع التصنيفات
+  const categoryData = [
+    { name: "ساخن",     value: filteredLeads.filter((l) => l.category === "hot").length,  fill: CATEGORY_COLORS.hot },
+    { name: "دافئ",     value: filteredLeads.filter((l) => l.category === "warm").length, fill: CATEGORY_COLORS.warm },
+    { name: "بارد",     value: filteredLeads.filter((l) => l.category === "cool").length, fill: CATEGORY_COLORS.cool },
+    { name: "بارد جداً",value: filteredLeads.filter((l) => l.category === "cold").length, fill: CATEGORY_COLORS.cold },
+  ].filter((d) => d.value > 0);
+
+  // أكثر المنتجات طلباً
+  const productCount: Record<string, number> = {};
+  filteredLeads.forEach((l) => {
+    const label = PRODUCT_LABELS[l.detected_product] || l.detected_product;
+    productCount[label] = (productCount[label] || 0) + 1;
   });
-  const prodData = Object.entries(prodCount)
+  const productData = Object.entries(productCount)
     .map(([name, value]) => ({ name, value }))
     .sort((a, b) => b.value - a.value)
     .slice(0, 6);
 
-  // آخر 7 أيام
-  const timeData = Array.from({ length: 7 }, (_, i) => {
+  // العملاء عبر الزمن (آخر 7 أيام)
+  const leadsOverTime: { date: string; leads: number }[] = [];
+  for (let i = 6; i >= 0; i--) {
     const d = new Date();
-    d.setDate(d.getDate() - (6 - i));
-    const label = d.toLocaleDateString("ar-SA", { weekday: "short" });
-    const leads  = data.leads.filter((l) => !l.is_demo && new Date(l.created_at).toDateString() === d.toDateString()).length;
-    const orders = data.orders.filter((o) => new Date(o.created_at).toDateString() === d.toDateString()).length;
-    return { date: label, leads, orders };
-  });
+    d.setDate(d.getDate() - i);
+    const label = d.toLocaleDateString("ar-SA", { month: "short", day: "numeric" });
+    const count = data.leads.filter((l) => {
+      const ld = new Date(l.created_at);
+      return ld.toDateString() === d.toDateString() && !l.is_demo;
+    }).length;
+    leadsOverTime.push({ date: label, leads: count });
+  }
 
-  const srcCount: Record<string, number> = {};
-  fLeads.forEach((l) => {
-    const s = l.platform || l.source || "غير معروف";
-    srcCount[s] = (srcCount[s] || 0) + 1;
+  // مسار التحويل
+  const funnelData = [
+    { name: "عملاء محتملون", value: filteredLeads.length },
+    { name: "مُقيَّمون",     value: filteredLeads.filter((l) => l.status === "scored").length },
+    { name: "مهام مبيعات",  value: data.salesTasks.length },
+    { name: "طلبات",         value: filteredOrders.length },
+    { name: "تسليم ناجح",   value: data.deliveries.filter((d) => d.status === "delivered").length },
+  ];
+
+  // مصادر العملاء
+  const sourceCount: Record<string, number> = {};
+  filteredLeads.forEach((l) => {
+    sourceCount[l.platform || l.source] = (sourceCount[l.platform || l.source] || 0) + 1;
   });
-  const srcData = Object.entries(srcCount)
-    .map(([name, value]) => ({ name, value }))
-    .sort((a, b) => b.value - a.value)
-    .slice(0, 8);
+  const sourceData = Object.entries(sourceCount)
+    .map(([name, value]) => ({ name, value, fill: "#C9A227" }))
+    .sort((a, b) => b.value - a.value);
 
   return (
-    <DashboardLayout>
-      <div className="p-5 md:p-7 max-w-[1400px] mx-auto">
-
-        {/* ── Header ── */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-7">
+    <div className="min-h-screen bg-background p-6 md:p-8">
+      {/* ── Header ─────────────────────────────────────────────────────────── */}
+      <div className="mb-8">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-2xl md:text-3xl font-black" style={{ color: "#8B1E1E" }}>
-              لوحة لحوم المضياف
+            <h1 className="text-4xl font-bold text-foreground font-cairo" style={{ fontWeight: 800 }}>
+              🥩 لحوم المضياف
             </h1>
-            <p className="text-sm text-muted-foreground mt-0.5">
-              نظرة شاملة — بيانات مباشرة من Google Sheets
+            <p className="text-sm text-muted-foreground mt-1 font-cairo">
+              لوحة إحصائيات شاملة — مربوطة بـ Google Sheets
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {(["today","week","month","all"] as const).map((f) => (
-              <button
-                key={f}
-                onClick={() => setFilter(f)}
-                className="px-3 py-1.5 rounded-lg text-sm font-semibold transition-all"
-                style={filter === f
-                  ? { background: "#8B1E1E", color: "#fff" }
-                  : { background: "var(--secondary)", color: "var(--foreground)" }
-                }>
-                {{today:"اليوم",week:"أسبوع",month:"شهر",all:"الكل"}[f]}
-              </button>
-            ))}
-            <Button onClick={refetch} variant="outline" size="sm" className="gap-2">
-              <RefreshCw size={14} /> تحديث
+          <div className="flex flex-wrap gap-3 items-center">
+            <select
+              value={dateFilter}
+              onChange={(e) => setDateFilter(e.target.value as typeof dateFilter)}
+              className="px-4 py-2 border border-border rounded-lg bg-card text-foreground font-cairo text-sm"
+            >
+              <option value="today">اليوم</option>
+              <option value="week">آخر 7 أيام</option>
+              <option value="month">آخر 30 يوم</option>
+              <option value="all">الكل</option>
+            </select>
+            <Button onClick={refetch} variant="outline" className="font-cairo gap-2">
+              <RefreshCw className="size-4" />
+              تحديث
             </Button>
-            {data.lastUpdated && (
-              <span className="text-xs text-muted-foreground hidden md:block">
-                آخر تحديث {fmtTime(data.lastUpdated)}
-              </span>
-            )}
+            <div className="flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-lg">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+              <span className="text-xs text-green-700 font-cairo">متصل بالشيت</span>
+            </div>
           </div>
         </div>
+        {data.lastUpdated && (
+          <p className="text-xs text-muted-foreground mt-3 font-cairo">
+            آخر تحديث: {new Date(data.lastUpdated).toLocaleTimeString("ar-SA")}
+          </p>
+        )}
+      </div>
 
-        {/* ── KPIs ── */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mb-7">
-          <KPI icon={<Users size={18}/>}       title="إجمالي العملاء"   value={summary.totalLeads}     sub={`${summary.hotLeads} ساخن`}       color="#8B1E1E" />
-          <KPI icon={<Zap size={18}/>}         title="عملاء ساخنون"    value={summary.hotLeads}       sub="أولوية قصوى"                       color="#8B1E1E" />
-          <KPI icon={<ShoppingCart size={18}/>} title="الطلبات"        value={summary.totalOrders}    sub={`${fmt(summary.totalValue)} ر.س`}  color="#C9A227" />
-          <KPI icon={<Truck size={18}/>}        title="معدل التسليم"   value={`${summary.deliveryRate}%`} sub="من الإجمالي"                  color="#1E8B4E" />
-          <KPI icon={<Clock size={18}/>}        title="مهام مفتوحة"    value={summary.openTasks}      sub={`${summary.escalatedTasks} عاجلة`} color="#E08A1E" />
-          <KPI icon={<Star size={18}/>}         title="متوسط الدرجة"   value={summary.avgScore}       sub="من 100"                            color="#C9A227" />
-          <KPI icon={<MessageSquare size={18}/>} title="استفسارات عاجلة" value={summary.urgentCS}    sub="تحتاج مندوب"                       color="#8B1E1E" />
-          <KPI icon={<FileText size={18}/>}     title="مقالات منشورة"  value={summary.publishedContent} sub={`SEO ${summary.avgSeoScore}`}   color="#5B7A99" />
-          <KPI icon={<Package size={18}/>}      title="منتجات ناقصة"   value={summary.lowStock}       sub="تحتاج تعبئة"                       color="#E08A1E" />
-          <KPI icon={<TrendingUp size={18}/>}   title="الإيرادات الكلية" value={`${fmt(summary.totalRevenue)} ر.س`} sub="من التقارير"        color="#1E8B4E" />
-        </div>
+      {/* ── KPI Cards ──────────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 mb-8">
+        <KPICard icon={<Users size={20} />}       title="إجمالي العملاء"        value={summary.totalLeads}    subtitle={`${summary.hotLeads} ساخن`} color="#8B1E1E" />
+        <KPICard icon={<Zap size={20} />}         title="ساخنون جاهزون"         value={summary.hotLeads}      subtitle="أولوية قصوى"                color="#8B1E1E" />
+        <KPICard icon={<ShoppingCart size={20} />} title="إجمالي الطلبات"       value={summary.totalOrders}   subtitle={`${summary.totalValue.toLocaleString("ar-SA")} ر.س`} color="#C9A227" />
+        <KPICard icon={<Truck size={20} />}       title="معدل التسليم"           value={`${summary.deliveryRate}%`} subtitle="من إجمالي التسليمات"  color="#1E8B4E" />
+        <KPICard icon={<Clock size={20} />}       title="مهام مفتوحة"           value={summary.openTasks}     subtitle="تحتاج متابعة"               color="#E08A1E" />
+        <KPICard icon={<Star size={20} />}        title="متوسط الدرجة"          value={summary.avgScore}      subtitle="من 100"                     color="#C9A227" />
+        <KPICard icon={<MessageSquare size={20} />} title="استفسارات عاجلة"     value={summary.urgentCS}      subtitle="تحتاج مندوب"                color="#8B1E1E" />
+        <KPICard icon={<FileText size={20} />}    title="مقالات منشورة"         value={summary.publishedContent} subtitle={`${summary.avgSeoScore} متوسط SEO`} color="#5B7A99" />
+      </div>
 
-        {/* ── Charts Row 1 ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">
-          {/* منحنى 7 أيام */}
-          <Card className="lg:col-span-2 border-border/60 shadow-sm">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base font-bold">العملاء والطلبات — آخر 7 أيام</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={260}>
-                <AreaChart data={timeData}>
-                  <defs>
-                    <linearGradient id="gL" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#8B1E1E" stopOpacity={0.25}/>
-                      <stop offset="95%" stopColor="#8B1E1E" stopOpacity={0}/>
-                    </linearGradient>
-                    <linearGradient id="gO" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#C9A227" stopOpacity={0.25}/>
-                      <stop offset="95%" stopColor="#C9A227" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#E8E3DC"/>
-                  <XAxis dataKey="date" stroke="#9CA3AF" fontSize={11}/>
-                  <YAxis stroke="#9CA3AF" fontSize={11} allowDecimals={false}/>
-                  <Tooltip contentStyle={{ borderRadius:8, fontFamily:"Cairo", fontSize:12 }}/>
-                  <Legend wrapperStyle={{ fontFamily:"Cairo", fontSize:12 }}/>
-                  <Area type="monotone" dataKey="leads"  stroke="#8B1E1E" fill="url(#gL)" strokeWidth={2} name="عملاء"/>
-                  <Area type="monotone" dataKey="orders" stroke="#C9A227" fill="url(#gO)" strokeWidth={2} name="طلبات"/>
-                </AreaChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          {/* Pie التصنيفات */}
-          <Card className="border-border/60 shadow-sm">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base font-bold">توزيع العملاء</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {catData.length === 0 ? (
-                <div className="h-[260px] flex items-center justify-center text-muted-foreground text-sm">
-                  لا توجد بيانات
-                </div>
-              ) : (
-                <>
-                  <ResponsiveContainer width="100%" height={200}>
-                    <PieChart>
-                      <Pie data={catData} cx="50%" cy="50%" innerRadius={55} outerRadius={85}
-                           paddingAngle={3} dataKey="value">
-                        {catData.map((e, i) => <Cell key={i} fill={e.fill}/>)}
-                      </Pie>
-                      <Tooltip contentStyle={{ borderRadius:8, fontFamily:"Cairo", fontSize:12 }}/>
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <div className="flex flex-wrap gap-2 justify-center mt-2">
-                    {catData.map((d) => (
-                      <div key={d.name} className="flex items-center gap-1.5 text-xs">
-                        <div className="w-2.5 h-2.5 rounded-full" style={{ background: d.fill }}/>
-                        <span className="text-muted-foreground">{d.name}: <span className="font-bold text-foreground">{d.value}</span></span>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* ── Charts Row 2 ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
-          {/* أكثر المنتجات */}
-          <Card className="border-border/60 shadow-sm">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base font-bold">أكثر المنتجات طلباً</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {prodData.length === 0 ? (
-                <div className="h-[240px] flex items-center justify-center text-muted-foreground text-sm">لا توجد بيانات</div>
-              ) : (
-                <ResponsiveContainer width="100%" height={240}>
-                  <BarChart data={prodData} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" stroke="#E8E3DC"/>
-                    <XAxis type="number" stroke="#9CA3AF" fontSize={11} allowDecimals={false}/>
-                    <YAxis dataKey="name" type="category" stroke="#9CA3AF" width={100} fontSize={11}/>
-                    <Tooltip contentStyle={{ borderRadius:8, fontFamily:"Cairo", fontSize:12 }}/>
-                    <Bar dataKey="value" fill="#C9A227" radius={[0,6,6,0]} name="الطلبات"/>
-                  </BarChart>
-                </ResponsiveContainer>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* مصادر العملاء */}
-          <Card className="border-border/60 shadow-sm">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base font-bold">مصادر العملاء</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {srcData.length === 0 ? (
-                <div className="h-[240px] flex items-center justify-center text-muted-foreground text-sm">لا توجد بيانات</div>
-              ) : (
-                <ResponsiveContainer width="100%" height={240}>
-                  <BarChart data={srcData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#E8E3DC"/>
-                    <XAxis dataKey="name" stroke="#9CA3AF" fontSize={10}/>
-                    <YAxis stroke="#9CA3AF" fontSize={11} allowDecimals={false}/>
-                    <Tooltip contentStyle={{ borderRadius:8, fontFamily:"Cairo", fontSize:12 }}/>
-                    <Bar dataKey="value" fill="#8B1E1E" radius={[6,6,0,0]} name="العملاء"/>
-                  </BarChart>
-                </ResponsiveContainer>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* ── جداول ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
-          {/* العملاء الساخنون */}
-          <Card className="border-border/60 shadow-sm">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base font-bold flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse"/>
-                آخر العملاء الساخنين
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {fLeads.filter((l) => l.category === "hot").length === 0 ? (
-                <p className="text-center text-muted-foreground text-sm py-8">لا يوجد عملاء ساخنون</p>
-              ) : (
-                <div className="overflow-x-auto -mx-1">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-border/60">
-                        <th className="text-right py-2 px-2 text-xs font-bold text-muted-foreground">الاسم</th>
-                        <th className="text-right py-2 px-2 text-xs font-bold text-muted-foreground">المنتج</th>
-                        <th className="text-right py-2 px-2 text-xs font-bold text-muted-foreground">الدرجة</th>
-                        <th className="text-right py-2 px-2 text-xs font-bold text-muted-foreground">المصدر</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {fLeads.filter((l: Lead) => l.category === "hot").slice(0, 8).map((l: Lead) => (
-                        <tr key={l.lead_id} className="border-b border-border/40 hover:bg-secondary/30 transition-colors">
-                          <td className="py-2 px-2 font-semibold">{l.name || "—"}</td>
-                          <td className="py-2 px-2 text-xs text-muted-foreground">
-                            {PRODUCT_LABELS[l.detected_product] || l.detected_product || "—"}
-                          </td>
-                          <td className="py-2 px-2">
-                            <span className="px-2 py-0.5 rounded text-xs font-bold text-white"
-                                  style={{ background: "#8B1E1E" }}>
-                              {l.final_score}
-                            </span>
-                          </td>
-                          <td className="py-2 px-2 text-xs text-muted-foreground">{l.platform || l.source || "—"}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* المهام العاجلة */}
-          <Card className="border-border/60 shadow-sm">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base font-bold">المهام العاجلة</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {data.salesTasks.filter((t) => t.task_status !== "closed").length === 0 ? (
-                <div className="flex flex-col items-center gap-2 py-8">
-                  <CheckCircle className="size-8 text-green-500"/>
-                  <p className="text-muted-foreground text-sm">لا توجد مهام مفتوحة 🎉</p>
-                </div>
-              ) : (
-                <div className="space-y-2.5">
-                  {data.salesTasks.filter((t: SalesTask) => t.task_status !== "closed").slice(0, 6).map((t: SalesTask) => (
-                    <div key={t.task_id} className="p-3 border border-border/60 rounded-xl hover:shadow-sm transition-shadow">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-sm truncate">{t.name}</p>
-                          <p className="text-xs text-muted-foreground truncate">{t.product_label} · {t.action_required}</p>
-                        </div>
-                        <span className={`px-2 py-0.5 rounded text-xs font-bold text-white shrink-0 ${
-                          t.task_status === "escalated" ? "bg-red-600" : "bg-orange-500"
-                        }`}>
-                          {t.task_status === "escalated" ? "عاجل" : "مفتوح"}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* ── آخر الطلبات + خدمة العملاء ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
-          <Card className="border-border/60 shadow-sm">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base font-bold flex items-center gap-2">
-                <ShoppingCart size={16}/> آخر الطلبات
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {fOrders.length === 0 ? (
-                <p className="text-center text-muted-foreground text-sm py-8">لا توجد طلبات</p>
-              ) : (
-                <div className="space-y-2">
-                  {fOrders.slice(0, 6).map((o: Order) => (
-                    <div key={o.order_id} className="flex items-center justify-between p-2.5 border border-border/50 rounded-xl">
-                      <div>
-                        <p className="font-semibold text-sm">{o.customer_name}</p>
-                        <p className="text-xs text-muted-foreground">{o.main_product}</p>
-                      </div>
-                      <div className="text-left shrink-0">
-                        <p className="font-black text-sm font-num" style={{ color:"#8B1E1E" }}>
-                          {fmt(o.total)} {o.currency}
-                        </p>
-                        <span className={`text-xs px-1.5 py-0.5 rounded ${
-                          o.status === "delivered"  ? "bg-green-100 text-green-700" :
-                          o.status === "processing" ? "bg-yellow-100 text-yellow-700" :
-                          o.status === "pending"    ? "bg-orange-100 text-orange-700" :
-                          "bg-gray-100 text-gray-600"
-                        }`}>
-                          {o.status === "delivered" ? "مُسلَّم" :
-                           o.status === "processing"? "قيد التجهيز" :
-                           o.status === "pending"   ? "قيد الانتظار" : o.status}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="border-border/60 shadow-sm">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base font-bold flex items-center gap-2">
-                <MessageSquare size={16}/> استفسارات العملاء
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {data.customerService.length === 0 ? (
-                <p className="text-center text-muted-foreground text-sm py-8">لا توجد استفسارات</p>
-              ) : (
-                <div className="space-y-2.5">
-                  {data.customerService.slice(0, 5).map((cs: CustomerService) => (
-                    <div key={cs.cs_id} className="p-3 border border-border/50 rounded-xl">
-                      <div className="flex items-start justify-between gap-2">
-                        <p className="font-semibold text-sm">{cs.name}</p>
-                        <span className={`px-2 py-0.5 rounded text-xs font-bold text-white shrink-0 ${
-                          cs.needs_human ? "bg-red-600" : "bg-blue-500"
-                        }`}>
-                          {cs.needs_human ? "يحتاج مندوب" : "آلي"}
-                        </span>
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2 leading-relaxed">{cs.message}</p>
-                      <p className="text-xs text-muted-foreground mt-1">{cs.channel} · {fmtDate(cs.received_at)}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* ── المحتوى SEO ── */}
-        <Card className="border-border/60 shadow-sm mb-5">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-bold flex items-center gap-2">
-              <FileText size={16}/> إحصائيات المحتوى SEO
+      {/* ── Charts Row 1 ───────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        {/* منحنى العملاء */}
+        <Card className="border-border/50 shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg font-cairo" style={{ fontWeight: 700 }}>
+              العملاء الجدد — آخر 7 أيام
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-3 gap-3 mb-5">
-              {[
-                { label:"منشورة", val:summary.publishedContent, cls:"bg-green-50 text-green-700" },
-                { label:"قيد الانتظار", val:summary.pendingContent, cls:"bg-yellow-50 text-yellow-700" },
-                { label:"متوسط SEO", val:summary.avgSeoScore, cls:"bg-blue-50 text-blue-700" },
-              ].map((s) => (
-                <div key={s.label} className={`text-center p-3 rounded-xl ${s.cls}`}>
-                  <p className="text-2xl font-black font-num">{s.val}</p>
-                  <p className="text-xs mt-0.5 font-semibold">{s.label}</p>
-                </div>
-              ))}
-            </div>
-            {data.content.length > 0 && (
+            <ResponsiveContainer width="100%" height={280}>
+              <AreaChart data={leadsOverTime}>
+                <defs>
+                  <linearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%"  stopColor="#8B1E1E" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#8B1E1E" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E0E0E0" />
+                <XAxis dataKey="date" stroke="#6B6B6B" fontSize={11} />
+                <YAxis stroke="#6B6B6B" fontSize={11} allowDecimals={false} />
+                <Tooltip contentStyle={{ borderRadius: 8, fontFamily: "Cairo" }} />
+                <Area type="monotone" dataKey="leads" stroke="#8B1E1E" fill="url(#grad)" strokeWidth={2} name="عملاء" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* توزيع التصنيفات */}
+        <Card className="border-border/50 shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg font-cairo" style={{ fontWeight: 700 }}>
+              توزيع العملاء حسب التصنيف
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {categoryData.length === 0 ? (
+              <div className="h-[280px] flex items-center justify-center text-muted-foreground font-cairo">
+                لا توجد بيانات
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={280}>
+                <PieChart>
+                  <Pie data={categoryData} cx="50%" cy="50%" innerRadius={65} outerRadius={105}
+                       paddingAngle={2} dataKey="value"
+                       label={({ name, value }) => `${name}: ${value}`}
+                       labelLine={false}>
+                    {categoryData.map((entry, i) => (
+                      <Cell key={i} fill={entry.fill} />
+                    ))}
+                  </Pie>
+                  <Tooltip contentStyle={{ borderRadius: 8, fontFamily: "Cairo" }} />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* ── Charts Row 2 ───────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        {/* أكثر المنتجات طلباً */}
+        <Card className="border-border/50 shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg font-cairo" style={{ fontWeight: 700 }}>
+              أكثر المنتجات طلباً
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {productData.length === 0 ? (
+              <div className="h-[280px] flex items-center justify-center text-muted-foreground font-cairo">لا توجد بيانات</div>
+            ) : (
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart data={productData} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" stroke="#E0E0E0" />
+                  <XAxis type="number" stroke="#6B6B6B" fontSize={11} allowDecimals={false} />
+                  <YAxis dataKey="name" type="category" stroke="#6B6B6B" width={110} fontSize={11} />
+                  <Tooltip contentStyle={{ borderRadius: 8, fontFamily: "Cairo" }} />
+                  <Bar dataKey="value" fill="#C9A227" radius={[0, 6, 6, 0]} name="الطلبات" />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* مسار التحويل */}
+        <Card className="border-border/50 shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg font-cairo" style={{ fontWeight: 700 }}>
+              قمع التحويل
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={280}>
+              <FunnelChart>
+                <Tooltip contentStyle={{ borderRadius: 8, fontFamily: "Cairo" }} />
+                <Funnel data={funnelData} dataKey="value" stroke="#8B1E1E" fill="#8B1E1E" fillOpacity={0.8}>
+                  <LabelList dataKey="name" position="right" style={{ fontFamily: "Cairo", fontSize: 12 }} />
+                </Funnel>
+              </FunnelChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* ── مصادر العملاء ──────────────────────────────────────────────────── */}
+      {sourceData.length > 0 && (
+        <div className="mb-6">
+          <Card className="border-border/50 shadow-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg font-cairo" style={{ fontWeight: 700 }}>
+                مصادر العملاء المحتملين
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={sourceData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#E0E0E0" />
+                  <XAxis dataKey="name" stroke="#6B6B6B" fontSize={11} />
+                  <YAxis stroke="#6B6B6B" fontSize={11} allowDecimals={false} />
+                  <Tooltip contentStyle={{ borderRadius: 8, fontFamily: "Cairo" }} />
+                  <Bar dataKey="value" fill="#8B1E1E" radius={[6, 6, 0, 0]} name="العملاء" />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* ── جداول البيانات ─────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        {/* العملاء الساخنون */}
+        <Card className="border-border/50 shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg font-cairo" style={{ fontWeight: 700 }}>
+              آخر العملاء الساخنين
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {filteredLeads.filter((l) => l.category === "hot").length === 0 ? (
+              <p className="text-center text-muted-foreground font-cairo py-8">لا يوجد عملاء ساخنون</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm font-cairo">
+                  <thead>
+                    <tr className="border-b border-border">
+                      <th className="text-right py-2 px-2 font-semibold">الاسم</th>
+                      <th className="text-right py-2 px-2 font-semibold">المنتج</th>
+                      <th className="text-right py-2 px-2 font-semibold">الدرجة</th>
+                      <th className="text-right py-2 px-2 font-semibold">القناة</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredLeads
+                      .filter((l) => l.category === "hot")
+                      .slice(0, 8)
+                      .map((lead: Lead) => (
+                        <tr key={lead.lead_id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
+                          <td className="py-2 px-2 font-medium">{lead.name || "—"}</td>
+                          <td className="py-2 px-2 text-muted-foreground text-xs">
+                            {PRODUCT_LABELS[lead.detected_product] || lead.detected_product}
+                          </td>
+                          <td className="py-2 px-2">
+                            <span className="inline-block px-2 py-0.5 bg-red-100 text-red-700 rounded text-xs font-semibold">
+                              {lead.final_score}
+                            </span>
+                          </td>
+                          <td className="py-2 px-2 text-xs text-muted-foreground">
+                            {lead.final_contact_channel}
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* المهام العاجلة */}
+        <Card className="border-border/50 shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg font-cairo" style={{ fontWeight: 700 }}>
+              المهام العاجلة
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {data.salesTasks.filter((t) => t.task_status !== "closed").length === 0 ? (
+              <div className="flex flex-col items-center gap-2 py-8">
+                <CheckCircle className="size-8 text-green-500" />
+                <p className="text-muted-foreground font-cairo">لا توجد مهام مفتوحة 🎉</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {data.salesTasks
+                  .filter((t: SalesTask) => t.task_status !== "closed")
+                  .slice(0, 6)
+                  .map((task: SalesTask) => (
+                    <div key={task.task_id} className="p-3 border border-border/50 rounded-lg hover:shadow-sm transition-shadow">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1">
+                          <p className="font-semibold font-cairo">{task.name}</p>
+                          <p className="text-xs text-muted-foreground font-cairo mt-0.5">{task.product_label}</p>
+                          <p className="text-xs text-muted-foreground font-cairo">{task.action_required}</p>
+                        </div>
+                        <span className={`px-2 py-1 rounded text-xs font-semibold text-white font-cairo ${
+                          task.task_status === "escalated" ? "bg-red-600" : "bg-orange-500"
+                        }`}>
+                          {task.task_status === "escalated" ? "عاجل" : "مفتوح"}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground font-cairo mt-1">
+                        {task.assigned_to && `المسؤول: ${task.assigned_to}`}
+                      </p>
+                    </div>
+                  ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* ── آخر الطلبات + خدمة العملاء ────────────────────────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        {/* آخر الطلبات */}
+        <Card className="border-border/50 shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg font-cairo flex items-center gap-2" style={{ fontWeight: 700 }}>
+              <ShoppingCart size={18} />
+              آخر الطلبات
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {filteredOrders.length === 0 ? (
+              <p className="text-center text-muted-foreground font-cairo py-8">لا توجد طلبات</p>
+            ) : (
               <div className="space-y-2">
-                {data.content.filter((c: Content) => c.status === "published").slice(0, 4).map((c: Content) => (
-                  <div key={c.article_id} className="flex items-center justify-between border-b border-border/40 pb-2 last:border-0">
-                    <p className="text-sm font-medium flex-1 truncate pl-4">{c.meta_title}</p>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className={`text-xs font-bold px-2 py-0.5 rounded ${
-                        c.seo_score >= 85 ? "bg-green-100 text-green-700" :
-                        c.seo_score >= 70 ? "bg-yellow-100 text-yellow-700" :
-                        "bg-red-100 text-red-700"
-                      }`}>SEO {c.seo_score}</span>
-                      <span className="text-xs text-muted-foreground">{fmtDate(c.published_at)}</span>
+                {filteredOrders.slice(0, 6).map((order: Order) => (
+                  <div key={order.order_id} className="flex items-center justify-between p-3 border border-border/50 rounded-lg">
+                    <div>
+                      <p className="font-semibold font-cairo text-sm">{order.customer_name}</p>
+                      <p className="text-xs text-muted-foreground font-cairo">{order.main_product}</p>
+                    </div>
+                    <div className="text-left">
+                      <p className="font-bold font-cairo text-sm" style={{ color: "#8B1E1E" }}>
+                        {order.total.toLocaleString("ar-SA")} {order.currency}
+                      </p>
+                      <span className={`text-xs px-2 py-0.5 rounded font-cairo ${
+                        order.status === "delivered"   ? "bg-green-100 text-green-700" :
+                        order.status === "processing"  ? "bg-yellow-100 text-yellow-700" :
+                        order.status === "pending"     ? "bg-orange-100 text-orange-700" :
+                        "bg-gray-100 text-gray-600"
+                      }`}>
+                        {order.status === "delivered"  ? "مُسلَّم" :
+                         order.status === "processing" ? "قيد التجهيز" :
+                         order.status === "pending"    ? "قيد الانتظار" : order.status}
+                      </span>
                     </div>
                   </div>
                 ))}
@@ -559,12 +520,112 @@ export default function Home() {
           </CardContent>
         </Card>
 
-        {/* Footer */}
-        <p className="text-center text-xs text-muted-foreground py-4">
-          لوحة المضياف · بيانات من Google Sheets
-          {data.lastUpdated ? ` · آخر تحديث ${fmtTime(data.lastUpdated)}` : ""}
+        {/* خدمة العملاء */}
+        <Card className="border-border/50 shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg font-cairo flex items-center gap-2" style={{ fontWeight: 700 }}>
+              <MessageSquare size={18} />
+              استفسارات خدمة العملاء
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {data.customerService.length === 0 ? (
+              <p className="text-center text-muted-foreground font-cairo py-8">لا توجد استفسارات</p>
+            ) : (
+              <div className="space-y-3">
+                {data.customerService.slice(0, 5).map((cs: CustomerService) => (
+                  <div key={cs.cs_id} className="p-3 border border-border/50 rounded-lg">
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <p className="font-semibold font-cairo text-sm">{cs.name}</p>
+                      <span className={`px-2 py-0.5 rounded text-xs font-semibold text-white font-cairo ${
+                        cs.needs_human ? "bg-red-600" : "bg-blue-500"
+                      }`}>
+                        {cs.needs_human ? "يحتاج مندوب" : "آلي"}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground font-cairo leading-relaxed line-clamp-2">
+                      {cs.message}
+                    </p>
+                    <div className="flex justify-between mt-1">
+                      <span className="text-xs text-muted-foreground font-cairo">{cs.channel}</span>
+                      <span className="text-xs text-muted-foreground font-cairo">{formatDate(cs.received_at)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* ── إحصائيات المحتوى ───────────────────────────────────────────────── */}
+      <Card className="border-border/50 shadow-sm">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg font-cairo flex items-center gap-2" style={{ fontWeight: 700 }}>
+            <FileText size={18} />
+            إحصائيات المحتوى SEO
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-3 gap-4 mb-6">
+            <div className="text-center p-4 bg-green-50 rounded-xl">
+              <p className="text-3xl font-bold text-green-700 font-cairo" style={{ fontWeight: 800 }}>
+                {summary.publishedContent}
+              </p>
+              <p className="text-xs text-green-600 font-cairo mt-1">منشورة</p>
+            </div>
+            <div className="text-center p-4 bg-yellow-50 rounded-xl">
+              <p className="text-3xl font-bold text-yellow-700 font-cairo" style={{ fontWeight: 800 }}>
+                {summary.pendingContent}
+              </p>
+              <p className="text-xs text-yellow-600 font-cairo mt-1">قيد الانتظار</p>
+            </div>
+            <div className="text-center p-4 bg-blue-50 rounded-xl">
+              <p className="text-3xl font-bold text-blue-700 font-cairo" style={{ fontWeight: 800 }}>
+                {summary.avgSeoScore}
+              </p>
+              <p className="text-xs text-blue-600 font-cairo mt-1">متوسط SEO</p>
+            </div>
+          </div>
+          {data.content.length > 0 && (
+            <div className="space-y-2">
+              {data.content
+                .filter((c: Content) => c.status === "published")
+                .slice(0, 4)
+                .map((article: Content) => (
+                  <div key={article.article_id}
+                       className="flex items-center justify-between border-b border-border/50 pb-2 last:border-0">
+                    <p className="text-sm font-cairo font-medium flex-1 truncate pl-4">
+                      {article.meta_title}
+                    </p>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <span className={`text-xs font-cairo font-bold px-2 py-0.5 rounded ${
+                        article.seo_score >= 85 ? "bg-green-100 text-green-700" :
+                        article.seo_score >= 70 ? "bg-yellow-100 text-yellow-700" :
+                        "bg-red-100 text-red-700"
+                      }`}>
+                        SEO {article.seo_score}
+                      </span>
+                      <span className="text-xs text-muted-foreground font-cairo">
+                        {formatDate(article.published_at)}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Footer */}
+      <div className="mt-8 text-center">
+        <p className="text-xs text-muted-foreground font-cairo">
+          لوحة المضياف • البيانات من Google Sheets •{" "}
+          {data.lastUpdated
+            ? `آخر تحديث ${new Date(data.lastUpdated).toLocaleTimeString("ar-SA")}`
+            : "جاري التحميل…"}
         </p>
       </div>
-    </DashboardLayout>
+    </div>
   );
 }
