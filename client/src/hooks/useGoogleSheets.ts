@@ -3,9 +3,7 @@
  * Hook لقراءة جميع أوراق Google Sheets لمشروع المضياف
  *
  * الإعداد المطلوب:
- * 1. اجعل الشيت عاماً (Share → Anyone with the link → Viewer)
- * 2. أضف VITE_SHEETS_ID=<معرف الشيت> في Vercel Environment Variables
- * 3. أسماء الأوراق يجب أن تكون: Leads, Orders, Deliveries, SalesTasks, CustomerService, Content
+ * يتم الجلب عبر /api/dashboard على الخادم حتى لا يظهر معرّف الجدول في المتصفح.
  *
  * كيف تحصل على معرف الشيت؟
  * من رابط الشيت: https://docs.google.com/spreadsheets/d/[SHEETS_ID]/edit
@@ -37,6 +35,8 @@ export interface Lead {
   updated_at: string;
   flow_origin: string;
   is_demo: boolean;
+  message?: string;
+  profile_url?: string;
 }
 
 export interface Order {
@@ -199,25 +199,6 @@ export interface SheetsState {
 }
 
 // ─── ثوابت ───────────────────────────────────────────────────────────────────
-
-const SHEETS_ID = (import.meta.env.VITE_SHEETS_ID as string) || "1chhGG5pznk6_l45venbJvUDYBnarPBOov1DBOF7AH7s";
-const API_KEY   = import.meta.env.VITE_GOOGLE_API_KEY as string; // اختياري إذا الشيت عام
-
-// أسماء الأوراق — تأكد أنها مطابقة تماماً لأسماء tabs في الشيت
-const SHEET_NAMES = {
-  leads:            "01_leads",
-  inventory:        "02_inventory",
-  orders:           "03_salla_orders",
-  deliveries:       "04_delivery_log",
-  salesTasks:       "05_sales_tasks",
-  customerService:  "06_customer_service_log",
-  dailyReports:     "07_daily_reports",
-  socialPosts:      "08_social_posts",
-  content:          "09_seo_content",
-  radarLeads:       "10_Radar_Leads",
-  whatsappSessions: "11_WhatsApp_Sessions",
-  sallaPages:       "12_Salla_Pages",
-} as const;
 
 // قيمة افتراضية فارغة
 const EMPTY_DATA: SheetsData = {
@@ -444,51 +425,6 @@ function parseSallaPages(rows: string[][]): SallaPage[] {
 
 // ─── دالة جلب ورقة واحدة ─────────────────────────────────────────────────────
 
-async function fetchSheet(sheetName: string): Promise<string[][]> {
-  // نستخدم gviz/tq CSV — يعمل بدون API Key إذا الشيت مشارك للعموم
-  const encodedName = encodeURIComponent(sheetName);
-  const url = `https://docs.google.com/spreadsheets/d/${SHEETS_ID}/gviz/tq?tqx=out:csv&sheet=${encodedName}`;
-
-  const res = await fetch(url);
-  if (!res.ok) {
-    throw new Error(`فشل جلب ورقة ${sheetName}: ${res.status} — تأكد أن الشيت مشارك للعموم`);
-  }
-
-  const csv = await res.text();
-
-  // تحويل CSV إلى مصفوفة صفوف
-  const rows: string[][] = [];
-  const lines = csv.split("\n");
-
-  for (const line of lines) {
-    if (!line.trim()) continue;
-    // تحليل CSV مع دعم الحقول التي تحتوي فواصل داخل علامات اقتباس
-    const cols: string[] = [];
-    let cur = "";
-    let inQuotes = false;
-    for (let i = 0; i < line.length; i++) {
-      const ch = line[i];
-      if (ch === '"') {
-        if (inQuotes && line[i + 1] === '"') {
-          cur += '"';
-          i++;
-        } else {
-          inQuotes = !inQuotes;
-        }
-      } else if (ch === "," && !inQuotes) {
-        cols.push(cur.trim());
-        cur = "";
-      } else {
-        cur += ch;
-      }
-    }
-    cols.push(cur.trim());
-    rows.push(cols);
-  }
-
-  return rows;
-}
-
 // ─── Hook الرئيسي ─────────────────────────────────────────────────────────────
 
 export function useGoogleSheets(
@@ -501,45 +437,26 @@ export function useGoogleSheets(
   const [error, setError]     = useState<string | null>(null);
 
   const fetchAll = useCallback(async () => {
-    // إذا لم يُضبط SHEETS_ID — أعد بيانات فارغة بدون خطأ
-    if (!SHEETS_ID) {
-      setError("⚠️ VITE_SHEETS_ID غير مضبوط. راجع إعدادات Vercel.");
-      setLoading(false);
-      return;
-    }
-
     setLoading(true);
     setError(null);
 
     try {
-      // جلب جميع الأوراق بالتوازي
-      const [
-        leadsRows,
-        inventoryRows,
-        ordersRows,
-        deliveriesRows,
-        salesTasksRows,
-        customerServiceRows,
-        dailyReportsRows,
-        socialPostsRows,
-        contentRows,
-        radarLeadsRows,
-        whatsappSessionsRows,
-        sallaPagesRows,
-      ] = await Promise.all([
-        fetchSheet(SHEET_NAMES.leads),
-        fetchSheet(SHEET_NAMES.inventory),
-        fetchSheet(SHEET_NAMES.orders),
-        fetchSheet(SHEET_NAMES.deliveries),
-        fetchSheet(SHEET_NAMES.salesTasks),
-        fetchSheet(SHEET_NAMES.customerService),
-        fetchSheet(SHEET_NAMES.dailyReports),
-        fetchSheet(SHEET_NAMES.socialPosts),
-        fetchSheet(SHEET_NAMES.content),
-        fetchSheet(SHEET_NAMES.radarLeads),
-        fetchSheet(SHEET_NAMES.whatsappSessions),
-        fetchSheet(SHEET_NAMES.sallaPages),
-      ]);
+      const response = await fetch("/api/dashboard");
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "تعذر الاتصال بمصدر البيانات");
+      const rows = payload.sheets as Record<string, string[][]>;
+      const leadsRows = rows.leads || [];
+      const inventoryRows = rows.inventory || [];
+      const ordersRows = rows.orders || [];
+      const deliveriesRows = rows.deliveries || [];
+      const salesTasksRows = rows.salesTasks || [];
+      const customerServiceRows = rows.customerService || [];
+      const dailyReportsRows = rows.dailyReports || [];
+      const socialPostsRows = rows.socialPosts || [];
+      const contentRows = rows.content || [];
+      const radarLeadsRows = rows.radarLeads || [];
+      const whatsappSessionsRows = rows.whatsappSessions || [];
+      const sallaPagesRows = rows.sallaPages || [];
 
       setData({
         leads:            parseLeads(leadsRows),
