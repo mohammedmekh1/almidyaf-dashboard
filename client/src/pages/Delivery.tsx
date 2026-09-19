@@ -1,107 +1,12 @@
 import { DashboardLayout } from "@/components/DashboardLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { useSheets } from "@/contexts/SheetsContext";
-import {
-  Truck,
-  MapPin,
-  CheckCircle2,
-  XCircle,
-  Clock,
-  ArrowRight
-} from "lucide-react";
-import { cn } from "@/lib/utils";
+import { CheckCircle2, Clock3, Copy, ExternalLink, MessageCircle, Send, XCircle } from "lucide-react";
+import { useMemo, useState } from "react";
 
-export default function DeliveryPage() {
-  const { data, loading, refetch } = useSheets();
-  const deliveries = data.deliveries;
-  return (
-    <DashboardLayout>
-      <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-        <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-primary">التوصيل</h1>
-            <p className="text-muted-foreground mt-1">متابعة حالة الشحنات واللوجستيات.</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="bg-green-50 text-green-700 px-4 py-2 rounded-lg border border-green-100 flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4" />
-              <span className="text-sm font-bold">معدل النجاح: 95%</span>
-            </div>
-          </div>
-        </header>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-6">
-            <Card className="border-none shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-xl font-bold text-primary">آخر عمليات التوصيل</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {deliveries.map((delivery) => (
-                  <div key={delivery.delivery_id} className="flex items-center justify-between p-4 rounded-xl border border-border/50 hover:border-primary/20 transition-colors">
-                    <div className="flex items-center gap-4">
-                      <div className={cn(
-                        "w-10 h-10 rounded-full flex items-center justify-center",
-                        delivery.status === 'delivered' ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
-                      )}>
-                        {delivery.status === 'delivered' ? <CheckCircle2 className="w-6 h-6" /> : <XCircle className="w-6 h-6" />}
-                      </div>
-                      <div>
-                        <p className="font-bold text-foreground">{delivery.product_type}</p>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
-                          <MapPin className="w-3 h-3" />
-                          <span>الرياض، {delivery.phone}</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="text-left">
-                      <p className="text-sm font-bold text-foreground">
-                        {delivery.status === 'delivered' ? 'تم التوصيل' : 'فشل التوصيل'}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {delivery.delivered_at ? new Date(delivery.delivered_at).toLocaleTimeString('ar-SA') : '---'}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          </div>
-
-          <Card className="border-none shadow-sm h-fit">
-            <CardHeader>
-              <CardTitle className="text-xl font-bold text-primary">إحصائيات القنوات</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {[
-                { channel: 'واتساب', count: 45, color: 'bg-green-500' },
-                { channel: 'رسائل نصية', count: 30, color: 'bg-blue-500' },
-                { channel: 'بريد إلكتروني', count: 15, color: 'bg-primary' },
-              ].map((item, i) => (
-                <div key={i} className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="font-bold">{item.channel}</span>
-                    <span className="text-muted-foreground">{item.count}%</span>
-                  </div>
-                  <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
-                    <div className={cn("h-full rounded-full", item.color)} style={{ width: `${item.count}%` }}></div>
-                  </div>
-                </div>
-              ))}
-
-              <div className="pt-6 border-t mt-6">
-                <Button className="w-full font-bold group" variant="outline">
-                  عرض التقرير المفصل
-                  <ArrowRight className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    </DashboardLayout>
-  );
-}
-
+type Row = Record<string, string>;
+const pick = (row: Row, ...keys: string[]) => keys.map((key) => row[key]).find((value) => value?.trim()) || "";
+const humanStatus = (row: Row) => pick(row, "delivery_status", "status", "message_status") || "غير محدد";
+export default function DeliveryPage() { const { data, loading } = useSheets(); const [selected, setSelected] = useState<Row | null>(null); const records = useMemo(() => [...(data.rawSheets.deliveries || []), ...(data.rawSheets.journeyLog || [])], [data.rawSheets]); const delivered = records.filter((row) => ["delivered", "sent", "success", "posted"].includes(humanStatus(row).toLowerCase())).length; const failed = records.filter((row) => ["failed", "error", "rejected"].includes(humanStatus(row).toLowerCase())).length; if (loading) return <DashboardLayout><div className="luxury-loading">جاري تحميل سجل التوصيل...</div></DashboardLayout>; return <DashboardLayout><div className="space-y-6"><header><p className="section-kicker">FULFILLMENT · MESSAGE DELIVERY</p><h1 className="text-3xl font-black">التوصيل والرسائل</h1><p className="mt-1 text-sm text-muted-foreground">سجل فعلي لحالة الإرسال، القناة، وقت التسليم، الرد، والخطوة التالية. لا توجد أرقام تقديرية.</p></header><div className="grid grid-cols-1 sm:grid-cols-3 gap-3"><Stat label="إجمالي السجلات" value={records.length} /><Stat label="تم الإرسال / التسليم" value={delivered} /><Stat label="فشل مسجل" value={failed} /></div><div className="grid grid-cols-1 xl:grid-cols-[1.1fr_1fr] gap-5"><Card className="luxury-card"><CardContent className="p-3"><div className="max-h-[680px] overflow-auto space-y-2">{records.map((row, index) => { const status = humanStatus(row); const ok = ["delivered", "sent", "success", "posted"].includes(status.toLowerCase()); return <button key={`${pick(row, "journey_id", "delivery_id", "lead_id")}-${index}`} onClick={() => setSelected(row)} className={`w-full rounded-xl border p-4 text-right ${selected === row ? "border-[#C41228] bg-[#FFF8F8]" : "border-[#F0EADF] bg-white hover:border-[#E8DCC4]"}`}><div className="flex items-start justify-between gap-3"><div><p className="font-bold text-sm">{pick(row, "name", "phone", "lead_id", "journey_id") || "سجل رسالة"}</p><p className="mt-1 text-xs text-muted-foreground">{pick(row, "message_template", "message", "content") || "لا يوجد نص رسالة محفوظ"}</p></div><span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] ${ok ? "bg-[#FFF8EF] text-[#8D6D32]" : "bg-[#FFF0F1] text-[#C41228]"}`}>{ok ? <CheckCircle2 size={12} /> : <XCircle size={12} />}{status}</span></div><div className="mt-3 flex flex-wrap gap-3 text-[10px] text-muted-foreground"><span>{pick(row, "channel", "final_contact_channel") || "قناة غير محددة"}</span><span>{pick(row, "triggered_at", "sent_at", "created_at") || "وقت غير محدد"}</span><span>رد: {pick(row, "response_received", "reply_received") || "غير مسجل"}</span></div></button>})}{!records.length && <div className="p-14 text-center text-sm text-muted-foreground">لا توجد سجلات توصيل فعلية متاحة.</div>}</div></CardContent></Card><Card className="luxury-card"><CardContent className="p-6">{selected ? <div className="space-y-4"><div><p className="section-kicker">تفاصيل سجل الرسالة</p><h2 className="text-xl font-black">{pick(selected, "journey_id", "delivery_id", "lead_id") || "بدون معرف"}</h2></div><div className="flex flex-wrap gap-2">{pick(selected, "phone", "mobile") && <a className="inline-flex items-center gap-2 rounded-lg bg-[#FFF7F7] px-3 py-2 text-xs font-bold text-[#C41228]" href={`https://wa.me/${pick(selected, "phone", "mobile").replace(/\D/g, "")}`} target="_blank" rel="noreferrer"><MessageCircle size={14} /> واتساب</a>}{pick(selected, "profile_url", "source_url") && <a className="inline-flex items-center gap-2 rounded-lg border border-[#E8DCC4] px-3 py-2 text-xs font-bold text-[#8D6D32]" href={pick(selected, "profile_url", "source_url")} target="_blank" rel="noreferrer"><ExternalLink size={14} /> المصدر</a>}</div><Detail icon={Send} title="نص الرسالة المرسلة" value={pick(selected, "message_template", "message", "content")} /><Detail icon={Clock3} title="الخطوة التالية" value={pick(selected, "next_step", "action_required")} /><Detail icon={MessageCircle} title="الملاحظات / الرد" value={pick(selected, "response_received", "reply_received", "notes", "error_reason")} /><div className="grid grid-cols-1 sm:grid-cols-2 gap-2">{Object.entries(selected).filter(([, value]) => value).map(([key, value]) => <div key={key} className="flex justify-between gap-3 border-b border-[#F5F2ED] py-2 text-xs"><span className="text-muted-foreground">{key.replaceAll("_", " ")}</span><span className="max-w-[65%] break-words text-left font-semibold">{value}</span></div>)}</div></div> : <div className="flex min-h-[500px] items-center justify-center text-sm text-muted-foreground">اختر سجلاً لرؤية تفاصيل الإرسال والتسليم.</div>}</CardContent></Card></div></div></DashboardLayout>; }
+function Stat({ label, value }: { label: string; value: number }) { return <Card className="luxury-card"><CardContent className="p-4"><p className="text-xs text-muted-foreground">{label}</p><b className="mt-1 block text-2xl text-[#C41228]">{value.toLocaleString("ar-SA")}</b></CardContent></Card>; }
+function Detail({ icon: Icon, title, value }: { icon: typeof Send; title: string; value: string }) { return <div className="rounded-xl border border-[#E8DCC4] bg-[#FFFCF7] p-4"><p className="mb-2 flex items-center gap-2 text-xs font-bold text-[#8D6D32]"><Icon size={14} />{title}</p><p className="whitespace-pre-wrap text-sm leading-7">{value || "لا يوجد حقل مسجل"}</p></div>; }

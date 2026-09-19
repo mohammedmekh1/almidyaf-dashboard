@@ -37,6 +37,8 @@ export interface Lead {
   is_demo: boolean;
   message?: string;
   profile_url?: string;
+  notes?: string;
+  reply_message?: string;
 }
 
 export interface Order {
@@ -189,6 +191,7 @@ export interface SheetsData {
   whatsappSessions: WhatsAppSession[];
   sallaPages: SallaPage[];
   lastUpdated: string | null;
+  rawSheets: Record<string, Record<string, string>[]>;
 }
 
 export interface SheetsState {
@@ -215,6 +218,7 @@ const EMPTY_DATA: SheetsData = {
   whatsappSessions: [],
   sallaPages:       [],
   lastUpdated:      null,
+  rawSheets:        {},
 };
 
 // ─── مساعدات تحويل البيانات ──────────────────────────────────────────────────
@@ -261,6 +265,10 @@ function parseLeads(rows: string[][]): Lead[] {
     updated_at:            r.updated_at ?? "",
     flow_origin:           r.flow_origin ?? "",
     is_demo:               toBool(r.is_demo),
+    message:               r.message ?? r.message_text ?? r.original_message ?? "",
+    profile_url:           r.profile_url ?? r.post_url ?? r.source_url ?? "",
+    notes:                 r.notes ?? r.analysis ?? r.ai_analysis ?? "",
+    reply_message:         r.reply_message ?? r.suggested_reply ?? r.response_template ?? "",
   }));
 }
 
@@ -471,7 +479,8 @@ export function useGoogleSheets(
         radarLeads:       parseRadarLeads(radarLeadsRows),
         whatsappSessions: parseWhatsAppSessions(whatsappSessionsRows),
         sallaPages:       parseSallaPages(sallaPagesRows),
-        lastUpdated:      new Date().toISOString(),
+        lastUpdated:      payload.lastUpdated || new Date().toISOString(),
+        rawSheets:        payload.rawSheets || {},
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : "خطأ غير معروف");

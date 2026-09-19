@@ -13,9 +13,10 @@ const SOURCES = {
   radarLeads: "google_intel",
   whatsappSessions: "interactions_log",
   sallaPages: "articles",
+  journeyLog: "journey_log",
 } as const;
 
-type ApiResponse = { sheets: Record<string, string[][]>; lastUpdated: string; source: string; warnings?: string[] };
+type ApiResponse = { sheets: Record<string, string[][]>; rawSheets: Record<string, Record<string, string>[]>; lastUpdated: string; source: string; warnings?: string[] };
 
 function parseCsv(csv: string): string[][] {
   const rows: string[][] = [];
@@ -47,6 +48,12 @@ async function fetchSheet(id: string, name: string): Promise<string[][]> {
   return parseCsv(await response.text());
 }
 
+function rowsToRecords(rows: string[][]): Record<string, string>[] {
+  if (rows.length < 2) return [];
+  const headers = rows[0].map((header) => header.trim());
+  return rows.slice(1).map((row) => Object.fromEntries(headers.map((header, index) => [header, row[index] ?? ""])));
+}
+
 export default async function handler(req: any, res: any) {
   if (req.method !== "GET") return res.status(405).json({ error: "Method not allowed" });
   const sheetId = process.env.GOOGLE_SHEET_ID || DEFAULT_SHEET_ID;
@@ -56,9 +63,11 @@ export default async function handler(req: any, res: any) {
       catch { return { key, rows: [] as string[][], warning: name }; }
     }));
     const entries = results.map(({ key, rows }) => [key, rows] as const);
+    const rawSheets = Object.fromEntries(results.map(({ key, rows }) => [key, rowsToRecords(rows)]));
     const warnings = results.filter((result) => result.warning).map((result) => result.warning as string);
     const payload: ApiResponse = {
       sheets: Object.fromEntries(entries),
+      rawSheets,
       lastUpdated: new Date().toISOString(),
       source: warnings.length ? "google-sheets-server-side-fallback" : "google-sheets-server-side",
       ...(warnings.length ? { warnings } : {}),
@@ -67,6 +76,6 @@ export default async function handler(req: any, res: any) {
     return res.status(200).json(payload);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown Google Sheets error";
-    return res.status(200).json({ sheets: {}, lastUpdated: new Date().toISOString(), source: "fallback", warnings: [message] });
+    return res.status(200).json({ sheets: {}, rawSheets: {}, lastUpdated: new Date().toISOString(), source: "fallback", warnings: [message] });
   }
 }

@@ -1,243 +1,32 @@
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { useSheets } from "@/contexts/SheetsContext";
-import { Loader2, ExternalLink, Phone, MessageCircle, Instagram, Twitter, Search } from "lucide-react";
-import { useState } from "react";
+import { ExternalLink, MessageCircle, Phone, Search, UserRound, Copy, Send, Activity } from "lucide-react";
+import { useMemo, useState } from "react";
 
-const CAT_STYLES: Record<string, string> = {
-  hot:  "bg-red-100 text-red-700 border border-red-200",
-  warm: "bg-orange-100 text-orange-700 border border-orange-200",
-  cool: "bg-blue-100 text-blue-700 border border-blue-200",
-  cold: "bg-gray-100 text-gray-600 border border-gray-200",
-};
-const CAT_LABELS: Record<string, string> = { hot:"🔥 ساخن", warm:"🌡 دافئ", cool:"❄️ بارد", cold:"🧊 بارد جداً" };
+type Row = Record<string, string>;
+const LABELS: Record<string, string> = { lead_id: "معرف العميل", name: "الاسم", phone: "الهاتف", message: "الرسالة الأصلية", message_text: "نص الرسالة", original_message: "الرسالة الأصلية", analysis: "التحليل", ai_analysis: "تحليل الذكاء الاصطناعي", notes: "الملاحظات", suggested_reply: "الرد المقترح", reply_message: "الرسالة الجاهزة للرد", response_template: "قالب الرد", source: "المصدر", platform: "المنصة", detected_product: "المنتج المرصود", intent: "نية الشراء", category: "التصنيف", score: "الدرجة", final_score: "الدرجة النهائية", urgency: "الإلحاح", location_hint: "الموقع", final_contact_channel: "قناة التواصل", profile_url: "رابط الحساب", post_url: "رابط المنشور", created_at: "وقت الإنشاء", updated_at: "آخر تحديث", consent: "الموافقة", status: "الحالة", quantity: "الكمية" };
+const pick = (row: Row, ...keys: string[]) => keys.map((key) => row[key]).find((value) => value?.trim()) || "";
+const title = (key: string) => LABELS[key] || key.replaceAll("_", " ");
+const isEmpty = (value: string) => !value || ["unknown", "null", "undefined", "false"].includes(value.toLowerCase());
 
-const PRODUCT_LABELS: Record<string, string> = {
-  full_carcass: "ذبيحة كاملة", half_carcass: "نصف ذبيحة",
-  quarter_carcass: "ربع ذبيحة", live_sheep: "خروف حي",
-  kg_meat: "لحم بالكيلو", slaughter_service: "خدمة ذبح",
-  events_catering: "خدمة حفلات", eid_adha: "أضحية العيد",
-  bulk_order: "طلب بالجملة",
-};
-
-const URGENCY_LABELS: Record<string, string> = {
-  immediate: "🚨 فوري", soon: "⚡ قريب", planned: "📅 مخطط", unknown: "—"
-};
+function LinkButton({ href, children, icon: Icon = ExternalLink }: { href: string; children: React.ReactNode; icon?: typeof ExternalLink }) { return <a href={href} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-lg bg-[#FFF7F7] px-3 py-2 text-xs font-bold text-[#C41228] border border-[#F1D9DC]"><Icon size={14} />{children}</a>; }
 
 export default function Leads() {
   const { data, loading } = useSheets();
-  const [filter, setFilter] = useState<"all"|"hot"|"warm"|"cool"|"cold">("all");
   const [search, setSearch] = useState("");
-  const [selected, setSelected] = useState<any>(null);
-
-  if (loading) return (
-    <DashboardLayout>
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="animate-spin size-8" style={{ color:"#FF6200" }}/>
-      </div>
-    </DashboardLayout>
-  );
-
-  const leads = data.leads
-    .filter((l) => !l.is_demo)
-    .filter((l) => filter === "all" || l.category === filter)
-    .filter((l) => {
-      if (!search) return true;
-      const s = search.toLowerCase();
-      return (l.name||"").toLowerCase().includes(s) ||
-             (l.phone||"").includes(s) ||
-             (l.message||"").toLowerCase().includes(s);
-    });
-
-  return (
-    <DashboardLayout>
-      <div className="p-4 md:p-6 max-w-[1400px] mx-auto">
-
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-          <div>
-            <h1 className="text-2xl font-black" style={{ color:"#FF6200" }}>العملاء المحتملون</h1>
-            <p className="text-sm text-muted-foreground">{leads.length} عميل</p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <div className="flex items-center gap-2 border border-border rounded-lg px-3 py-1.5 bg-white">
-              <Search size={14} className="text-muted-foreground"/>
-              <input
-                value={search} onChange={e => setSearch(e.target.value)}
-                placeholder="بحث بالاسم أو الهاتف..."
-                className="outline-none text-sm w-40 bg-transparent"
-              />
-            </div>
-            {(["all","hot","warm","cool","cold"] as const).map((f) => (
-              <button key={f} onClick={() => setFilter(f)}
-                      className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
-                      style={filter===f ? {background:"#FF6200",color:"#fff"} : {background:"var(--secondary)",color:"var(--foreground)"}}>
-                {f==="all"?"الكل":CAT_LABELS[f]}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-
-          {/* قائمة العملاء */}
-          <div className="lg:col-span-2">
-            <div className="space-y-2">
-              {leads.map((l) => (
-                <div key={l.lead_id}
-                     onClick={() => setSelected(l)}
-                     className={`p-4 rounded-xl border cursor-pointer transition-all hover:shadow-md ${
-                       selected?.lead_id === l.lead_id
-                         ? "border-orange-400 bg-orange-50"
-                         : "border-border bg-white hover:border-orange-300"
-                     }`}>
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-bold text-sm">{l.name || "—"}</span>
-                        <span className={`px-2 py-0.5 rounded text-xs font-bold ${CAT_STYLES[l.category] || "bg-gray-100"}`}>
-                          {CAT_LABELS[l.category] || l.category}
-                        </span>
-                        {l.urgency === "immediate" && (
-                          <span className="px-1.5 py-0.5 bg-red-500 text-white rounded text-xs font-bold animate-pulse">فوري</span>
-                        )}
-                      </div>
-                      <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-                        {l.phone && (
-                          <span className="flex items-center gap-1 font-medium text-green-700">
-                            <Phone size={11}/> {l.phone}
-                          </span>
-                        )}
-                        <span>{PRODUCT_LABELS[l.detected_product] || l.detected_product || "—"}</span>
-                        <span>{l.location_hint || "—"}</span>
-                        <span className="font-bold" style={{ color:"#FF6200" }}>{l.final_score}/100</span>
-                      </div>
-                      {l.message && (
-                        <p className="text-xs text-muted-foreground mt-1.5 line-clamp-2 leading-relaxed">
-                          {l.message.substring(0, 120)}
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex flex-col items-end gap-1.5 shrink-0">
-                      {l.phone && (
-                        <a href={`https://wa.me/${l.phone.replace('+','')}`} target="_blank"
-                           onClick={e => e.stopPropagation()}
-                           className="flex items-center gap-1 px-2 py-1 bg-green-500 text-white rounded-lg text-xs font-bold hover:bg-green-600 transition-colors">
-                          <MessageCircle size={11}/> واتساب
-                        </a>
-                      )}
-                      {l.profile_url && (
-                        <a href={l.profile_url} target="_blank"
-                           onClick={e => e.stopPropagation()}
-                           className="flex items-center gap-1 px-2 py-1 bg-blue-500 text-white rounded-lg text-xs font-bold hover:bg-blue-600 transition-colors">
-                          <ExternalLink size={11}/> الحساب
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-              {leads.length === 0 && (
-                <div className="text-center py-16 text-muted-foreground">لا توجد عملاء</div>
-              )}
-            </div>
-          </div>
-
-          {/* بطاقة التفاصيل */}
-          <div className="lg:col-span-1">
-            {selected ? (
-              <Card className="border-border shadow-sm sticky top-4">
-                <CardContent className="p-5">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-black text-base">{selected.name || "—"}</h3>
-                    <span className={`px-2 py-1 rounded-lg text-xs font-bold ${CAT_STYLES[selected.category] || ""}`}>
-                      {CAT_LABELS[selected.category]}
-                    </span>
-                  </div>
-
-                  {/* درجة كبيرة */}
-                  <div className="text-center mb-4 p-3 rounded-xl"
-                       style={{ background:"#FF620015" }}>
-                    <p className="text-4xl font-black" style={{ color:"#FF6200" }}>
-                      {selected.final_score}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-0.5">نقطة من 100</p>
-                  </div>
-
-                  {/* أزرار التواصل الفوري */}
-                  <div className="space-y-2 mb-4">
-                    {selected.phone && (
-                      <>
-                        <a href={`https://wa.me/${selected.phone.replace('+','')}`} target="_blank"
-                           className="flex items-center justify-center gap-2 w-full py-2.5 bg-green-500 text-white rounded-xl font-bold text-sm hover:bg-green-600 transition-colors">
-                          <MessageCircle size={15}/> واتساب — {selected.phone}
-                        </a>
-                        <a href={`tel:${selected.phone}`}
-                           className="flex items-center justify-center gap-2 w-full py-2.5 border border-green-400 text-green-700 rounded-xl font-bold text-sm hover:bg-green-50 transition-colors">
-                          <Phone size={15}/> اتصال مباشر
-                        </a>
-                      </>
-                    )}
-                    {selected.profile_url && (
-                      <a href={selected.profile_url} target="_blank"
-                         className="flex items-center justify-center gap-2 w-full py-2.5 bg-blue-500 text-white rounded-xl font-bold text-sm hover:bg-blue-600 transition-colors">
-                        <ExternalLink size={15}/> الملف الشخصي
-                      </a>
-                    )}
-                    {selected.post_url && (
-                      <a href={selected.post_url} target="_blank"
-                         className="flex items-center justify-center gap-2 w-full py-2.5 border border-blue-400 text-blue-700 rounded-xl font-bold text-sm hover:bg-blue-50 transition-colors">
-                        <ExternalLink size={15}/> المنشور الأصلي
-                      </a>
-                    )}
-                  </div>
-
-                  {/* التفاصيل */}
-                  <div className="space-y-2 text-sm">
-                    {[
-                      { label:"المنتج",    val: PRODUCT_LABELS[selected.detected_product] || selected.detected_product },
-                      { label:"الكمية",    val: selected.quantity > 0 ? selected.quantity + " وحدة" : null },
-                      { label:"الموقع",    val: selected.location_hint },
-                      { label:"المنصة",    val: selected.platform || selected.source },
-                      { label:"الإلحاحية", val: URGENCY_LABELS[selected.urgency] || selected.urgency },
-                      { label:"القناة",    val: selected.final_contact_channel },
-                      { label:"التوصيل",  val: selected.delivery_needed ? "✅ نعم" : "❌ لا" },
-                      { label:"المناسبة",  val: selected.event_type !== "unknown" ? selected.event_type : null },
-                      { label:"الميزانية", val: selected.budget_signal !== "unknown" ? selected.budget_signal : null },
-                      { label:"التاريخ",  val: selected.created_at ? new Date(selected.created_at).toLocaleDateString("ar-SA") : null },
-                    ].filter(r => r.val).map(r => (
-                      <div key={r.label} className="flex justify-between items-start gap-2 py-1.5 border-b border-border/40 last:border-0">
-                        <span className="text-muted-foreground text-xs">{r.label}</span>
-                        <span className="font-semibold text-xs text-left">{r.val}</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* الرسالة */}
-                  {selected.message && (
-                    <div className="mt-3 p-3 bg-secondary/60 rounded-xl">
-                      <p className="text-xs font-bold text-muted-foreground mb-1">الرسالة الأصلية</p>
-                      <p className="text-xs leading-relaxed">{selected.message}</p>
-                    </div>
-                  )}
-
-                  {/* ملاحظة AI */}
-                  {selected.notes && (
-                    <div className="mt-2 p-3 bg-orange-50 rounded-xl border border-orange-100">
-                      <p className="text-xs font-bold text-orange-700 mb-1">تحليل AI</p>
-                      <p className="text-xs text-orange-800 leading-relaxed">{selected.notes}</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="flex flex-col items-center justify-center h-64 text-muted-foreground border border-dashed border-border rounded-xl">
-                <p className="text-sm">انقر على عميل لرؤية تفاصيله</p>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </DashboardLayout>
-  );
+  const [selected, setSelected] = useState<Row | null>(null);
+  const rawRows = data.rawSheets.leads || data.leads.map((lead) => lead as unknown as Row);
+  const leads = useMemo(() => rawRows.filter((row) => !["true", "TRUE", "1", "yes"].includes(row.is_demo || "")).filter((row) => !search || Object.values(row).join(" ").toLowerCase().includes(search.toLowerCase())), [rawRows, search]);
+  const selectedPhone = selected ? pick(selected, "phone", "mobile", "whatsapp") : "";
+  const selectedReply = selected ? pick(selected, "reply_message", "suggested_reply", "response_template", "recommended_reply") : "";
+  if (loading) return <DashboardLayout><div className="luxury-loading">جاري تحميل الرادار...</div></DashboardLayout>;
+  return <DashboardLayout><div className="space-y-6">
+    <header className="flex flex-col md:flex-row md:items-end justify-between gap-4"><div><p className="section-kicker">LEADS & CRM · RADAR</p><h1 className="text-3xl font-black">الرادار والمبيعات</h1><p className="text-sm text-muted-foreground mt-1">ملف كامل لكل عميل محتمل، مصدره، رسالته، تحليله وخطوة التواصل التالية.</p></div><div className="flex items-center gap-2 rounded-lg border border-[#E8DCC4] bg-white px-3 py-2"><Search size={15} className="text-muted-foreground" /><input className="bg-transparent text-sm outline-none" placeholder="ابحث في كل الحقول..." value={search} onChange={(event) => setSearch(event.target.value)} /></div></header>
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3"><Metric label="إجمالي السجلات" value={leads.length} /><Metric label="مع هاتف" value={leads.filter((row) => pick(row, "phone", "mobile")).length} /><Metric label="رسائل للتحليل" value={leads.filter((row) => pick(row, "message", "message_text", "original_message")).length} /><Metric label="ردود مقترحة" value={leads.filter((row) => pick(row, "reply_message", "suggested_reply", "response_template")).length} /></div>
+    <div className="grid grid-cols-1 xl:grid-cols-[1.05fr_1fr] gap-5"><Card className="luxury-card"><CardContent className="p-3"><div className="max-h-[680px] overflow-auto space-y-2">{leads.map((row, index) => { const name = pick(row, "name", "full_name", "customer_name") || "عميل بلا اسم"; const message = pick(row, "message", "message_text", "original_message"); return <button key={`${pick(row, "lead_id", "id")}-${index}`} onClick={() => setSelected(row)} className={`w-full rounded-xl border p-4 text-right transition-all ${selected === row ? "border-[#C41228] bg-[#FFF8F8]" : "border-[#F0EADF] bg-white hover:border-[#E8DCC4]"}`}><div className="flex items-start justify-between gap-3"><div className="min-w-0"><div className="flex items-center gap-2"><span className="font-bold text-sm truncate">{name}</span><span className="text-[10px] rounded-full bg-[#FFF8EF] px-2 py-1 text-[#8D6D32]">{pick(row, "category", "intent") || "غير مصنف"}</span></div><p className="mt-2 line-clamp-2 text-xs leading-5 text-muted-foreground">{message || "لا توجد رسالة نصية في السجل"}</p></div><div className="shrink-0 text-left"><b className="text-lg text-[#C41228]">{pick(row, "final_score", "score") || "—"}</b><small className="block text-[10px] text-muted-foreground">الدرجة</small></div></div><div className="mt-3 flex flex-wrap gap-2 text-[10px] text-muted-foreground"><span>{pick(row, "platform", "source") || "مصدر غير محدد"}</span><span>{pick(row, "location_hint", "location") || "موقع غير محدد"}</span><span>{pick(row, "created_at", "timestamp") || "وقت غير محدد"}</span></div></button>})}{!leads.length && <div className="p-14 text-center text-sm text-muted-foreground">لا توجد سجلات فعلية متاحة من الشيت.</div>}</div></CardContent></Card>
+      <Card className="luxury-card"><CardContent className="p-6">{selected ? <div className="space-y-5"><div className="flex items-start justify-between"><div><p className="section-kicker">ملف العميل الكامل</p><h2 className="text-2xl font-black">{pick(selected, "name", "full_name", "customer_name") || "عميل بلا اسم"}</h2><p className="text-xs text-muted-foreground mt-1">{pick(selected, "lead_id", "id") || "بدون معرف"}</p></div><UserRound className="text-[#B38E46]" /></div><div className="flex flex-wrap gap-2">{selectedPhone && <><LinkButton href={`https://wa.me/${selectedPhone.replace(/\D/g, "")}`} icon={MessageCircle}>فتح واتساب</LinkButton><LinkButton href={`tel:${selectedPhone}`} icon={Phone}>اتصال {selectedPhone}</LinkButton></>}{pick(selected, "profile_url", "post_url", "source_url") && <LinkButton href={pick(selected, "profile_url", "post_url", "source_url")}>الحساب / المنشور</LinkButton>}</div><DetailBox icon={Activity} title="الرسالة الأصلية" value={pick(selected, "message", "message_text", "original_message")} empty="لا يوجد نص رسالة في هذا السجل." /><DetailBox icon={Activity} title="التحليل" value={pick(selected, "analysis", "ai_analysis", "notes", "intent") } empty="لا يوجد تحليل مسجل." /><DetailBox icon={Send} title="الرسالة المقترحة للرد" value={selectedReply} empty="لا يوجد رد مقترح مسجل." copy={selectedReply} /><div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-2 border-t border-[#F0EADF] pt-4">{Object.entries(selected).filter(([key, value]) => !isEmpty(value) && !["message", "message_text", "original_message", "analysis", "ai_analysis", "notes", "reply_message", "suggested_reply", "response_template"].includes(key)).map(([key, value]) => <div key={key} className="flex justify-between gap-3 border-b border-[#F5F2ED] py-2 text-xs"><span className="text-muted-foreground">{title(key)}</span><span className="max-w-[65%] break-words text-left font-semibold">{value}</span></div>)}</div></div> : <div className="flex min-h-[520px] flex-col items-center justify-center text-center text-muted-foreground"><UserRound size={38} className="mb-3 text-[#E8DCC4]" /><p className="text-sm">اختر عميلاً لرؤية كل البيانات التشغيلية.</p></div>}</CardContent></Card></div>
+  </div></DashboardLayout>;
 }
+function Metric({ label, value }: { label: string; value: number }) { return <Card className="luxury-card"><CardContent className="p-4"><p className="text-xs text-muted-foreground">{label}</p><b className="mt-1 block text-2xl text-[#C41228]">{value.toLocaleString("ar-SA")}</b></CardContent></Card>; }
+function DetailBox({ icon: Icon, title: heading, value, empty, copy }: { icon: typeof Activity; title: string; value: string; empty: string; copy?: string }) { return <div className="rounded-xl border border-[#E8DCC4] bg-[#FFFCF7] p-4"><div className="mb-2 flex items-center justify-between"><p className="flex items-center gap-2 text-xs font-bold text-[#8D6D32]"><Icon size={14} />{heading}</p>{copy && <button onClick={() => navigator.clipboard?.writeText(copy)} className="text-[#B38E46]" title="نسخ"><Copy size={14} /></button>}</div><p className="whitespace-pre-wrap text-sm leading-7">{value || <span className="text-muted-foreground">{empty}</span>}</p></div>; }
