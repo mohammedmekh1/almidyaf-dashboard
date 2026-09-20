@@ -12,6 +12,7 @@ import Tasks from "./pages/Tasks";
 import Delivery from "./pages/Delivery";
 import CustomerService from "./pages/CustomerService";
 import Content from "./pages/Content";
+import AuthGate from "./components/AuthGate";
 
 function Router() {
   return (
@@ -32,12 +33,14 @@ export default function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider defaultTheme="light">
-        <SheetsProvider>
-          <TooltipProvider>
-            <Toaster position="top-center" dir="rtl" />
-            <Router />
-          </TooltipProvider>
-        </SheetsProvider>
+        <TooltipProvider>
+          <Toaster position="top-center" dir="rtl" />
+          <AuthGate>
+            <SheetsProvider>
+              <Router />
+            </SheetsProvider>
+          </AuthGate>
+        </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>
   );

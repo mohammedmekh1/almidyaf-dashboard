@@ -1,3 +1,5 @@
+import { isAuthenticated } from "./_auth";
+
 const DEFAULT_SHEET_ID = "1A4zseycVNZ8bkL9qCYdGViiAzjgH7qucvzPw5avJ5qc";
 
 const SOURCES = {
@@ -56,6 +58,7 @@ function rowsToRecords(rows: string[][]): Record<string, string>[] {
 
 export default async function handler(req: any, res: any) {
   if (req.method !== "GET") return res.status(405).json({ error: "Method not allowed" });
+  if (!isAuthenticated(req)) return res.status(401).json({ error: "يلزم تسجيل الدخول للوصول إلى بيانات اللوحة" });
   const sheetId = process.env.GOOGLE_SHEET_ID || DEFAULT_SHEET_ID;
   try {
     const results = await Promise.all(Object.entries(SOURCES).map(async ([key, name]) => {
