@@ -46,8 +46,14 @@ function parseCsv(csv: string): string[][] {
 async function fetchSheet(id: string, name: string): Promise<string[][]> {
   const url = `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(name)}`;
   const response = await fetch(url, { headers: { accept: "text/csv" } });
-  if (!response.ok) throw new Error(`Google Sheets returned ${response.status} for ${name}`);
-  return parseCsv(await response.text());
+  if (response.ok) return parseCsv(await response.text());
+  const token = process.env.GOOGLE_WORKSPACE_CLI_TOKEN;
+  if (!token) throw new Error(`Google Sheets returned ${response.status} for ${name}`);
+  const apiUrl = `https://sheets.googleapis.com/v4/spreadsheets/${id}/values/${encodeURIComponent(`${name}!A:AZ`)}`;
+  const apiResponse = await fetch(apiUrl, { headers: { authorization: `Bearer ${token}`, accept: "application/json" } });
+  if (!apiResponse.ok) throw new Error(`Google Sheets API returned ${apiResponse.status} for ${name}`);
+  const payload = await apiResponse.json() as { values?: string[][] };
+  return payload.values || [];
 }
 
 function rowsToRecords(rows: string[][]): Record<string, string>[] {

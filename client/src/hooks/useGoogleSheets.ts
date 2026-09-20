@@ -15,9 +15,23 @@ import { useState, useEffect, useCallback } from "react";
 
 export interface Lead {
   lead_id: string;
+  match_key?: string;
+  content_hash?: string;
   phone: string;
   name: string;
+  username?: string;
   source: string;
+  product_category?: string;
+  product_interest?: string;
+  occasion?: string;
+  region?: string;
+  lead_quality?: number;
+  journey_step?: string;
+  budget_signal?: string;
+  raw_text?: string;
+  ai_reason?: string;
+  is_radar?: boolean;
+  captured_at?: string;
   platform: string;
   detected_product: string;
   quantity: number;
@@ -245,29 +259,43 @@ const toNum  = (v: string) => parseFloat(v) || 0;
 function parseLeads(rows: string[][]): Lead[] {
   return rowsToObjects(rows).map((r) => ({
     lead_id:               r.lead_id ?? "",
+    match_key:             r.match_key ?? "",
+    content_hash:         r.content_hash ?? "",
     phone:                 r.phone ?? "",
-    name:                  r.name ?? "",
+    name:                  r.name ?? r.full_name ?? "",
+    username:              r.username ?? "",
     source:                r.source ?? "",
     platform:              r.platform ?? "",
-    detected_product:      r.detected_product ?? "",
+    detected_product:      r.detected_product ?? r.product_interest ?? r.product_category ?? "",
+    product_category:      r.product_category ?? "",
+    product_interest:      r.product_interest ?? "",
+    occasion:              r.occasion ?? "",
+    region:                r.region ?? "",
     quantity:              toNum(r.quantity),
     location_hint:         r.location_hint ?? "",
-    category:              (r.category as Lead["category"]) ?? "cold",
+    category:              ((r.category || "").toLowerCase() as Lead["category"]) || "cold",
     status:                r.status ?? "",
-    score:                 toNum(r.score),
-    final_score:           toNum(r.final_score),
+    score:                 toNum(r.score || r.lead_quality),
+    final_score:           toNum(r.final_score || r.lead_quality),
+    lead_quality:          toNum(r.lead_quality),
     intent:                r.intent ?? "",
+    journey_step:         r.journey_step ?? "",
+    budget_signal:        r.budget_signal ?? "",
+    raw_text:             r.raw_text ?? "",
+    ai_reason:            r.ai_reason ?? "",
     urgency:               r.urgency ?? "",
     final_contact_channel: r.final_contact_channel ?? "",
     has_phone:             toBool(r.has_phone),
     consent:               toBool(r.consent),
-    created_at:            r.created_at ?? "",
+    created_at:            r.created_at ?? r.captured_at ?? "",
     updated_at:            r.updated_at ?? "",
+    captured_at:           r.captured_at ?? "",
     flow_origin:           r.flow_origin ?? "",
     is_demo:               toBool(r.is_demo),
-    message:               r.message ?? r.message_text ?? r.original_message ?? "",
+    is_radar:              toBool(r.is_radar),
+    message:               r.message ?? r.message_text ?? r.original_message ?? r.raw_text ?? "",
     profile_url:           r.profile_url ?? r.post_url ?? r.source_url ?? "",
-    notes:                 r.notes ?? r.analysis ?? r.ai_analysis ?? "",
+    notes:                 r.notes ?? r.analysis ?? r.ai_analysis ?? r.ai_reason ?? "",
     reply_message:         r.reply_message ?? r.suggested_reply ?? r.response_template ?? "",
   }));
 }
