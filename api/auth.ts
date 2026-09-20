@@ -1,4 +1,4 @@
-import { clearSessionCookie, isAuthenticated, managerName, sessionCookie } from "./_auth";
+import { clearSessionCookie, isAuthenticated, managerName, sessionCookie } from "./_auth.js";
 
 export default async function handler(req: any, res: any) {
   if (req.method === "GET") {

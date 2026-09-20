@@ -1,4 +1,4 @@
-import { isAuthenticated } from "./_auth";
+import { isAuthenticated } from "./_auth.js";
 
 const DEFAULT_SHEET_ID = "1A4zseycVNZ8bkL9qCYdGViiAzjgH7qucvzPw5avJ5qc";
 
