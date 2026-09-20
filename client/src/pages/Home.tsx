@@ -15,7 +15,7 @@ function Metric({ icon: Icon, label, value, note, accent = GOLD }: { icon: typeo
     <CardContent className="p-5">
       <div className="flex items-start justify-between gap-3">
         <div className="metric-icon" style={{ color: accent, background: `${accent}12` }}><Icon size={20} /></div>
-        <span className="metric-trend"><ArrowUpLeft size={12} /> 12.4%</span>
+        <span className="metric-trend">بيانات فعلية</span>
       </div>
       <p className="mt-5 text-sm text-muted-foreground">{label}</p>
       <p className="mt-1 text-2xl font-bold tracking-tight text-foreground">{value}</p>
@@ -36,7 +36,7 @@ export default function Home() {
     return { day: day.toLocaleDateString("ar-SA", { weekday: "short" }), value: data.leads.filter((lead) => !lead.is_demo && new Date(lead.created_at).toDateString() === key).length };
   }), [data.leads]);
   const channels = useMemo(() => Object.entries(data.leads.reduce<Record<string, number>>((acc, lead) => { const key = lead.platform || lead.source || "مباشر"; acc[key] = (acc[key] || 0) + 1; return acc; }, {})).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([name, value]) => ({ name, value })), [data.leads]);
-  const recentOrders = data.orders.slice(-5).reverse();
+  const recentOrders = (data.rawSheets.salesTasks || []).slice(-5).reverse();
 
   if (loading) return <Loading />;
   if (error) return <ErrorView message={error} retry={refetch} />;
@@ -49,9 +49,9 @@ export default function Home() {
       </section>
 
       <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        <Metric icon={BarChart3} label="إجمالي الإيرادات" value={money(summary.totalValue)} note="من الطلبات المسجلة" />
+        <Metric icon={BarChart3} label="إجمالي الإيرادات" value={summary.totalValue ? money(summary.totalValue) : "غير مسجل"} note="لا توجد قيمة مالية في ورقة البيانات" />
         <Metric icon={Users} label="قاعدة العملاء" value={summary.totalLeads.toLocaleString("ar-SA")} note={`${summary.hotLeads} عميل عالي النية`} accent={CRIMSON} />
-        <Metric icon={Package} label="الطلبات المؤكدة" value={summary.totalOrders.toLocaleString("ar-SA")} note="تدفق الطلبات الحالي" />
+        <Metric icon={Package} label="سجلات تسليم المبيعات" value={summary.totalOrders.toLocaleString("ar-SA")} note="من ورقة sales_handoff" />
         <Metric icon={Truck} label="معدل التسليم" value={`${summary.deliveryRate}%`} note="استقرار العمليات اللوجستية" accent={CRIMSON} />
       </section>
 
@@ -61,7 +61,7 @@ export default function Home() {
       </section>
 
       <section className="grid grid-cols-1 xl:grid-cols-[1.35fr_1fr] gap-5">
-        <Card className="luxury-card"><CardHeader className="flex-row items-center justify-between"><div><p className="section-kicker">آخر الحركة</p><CardTitle>الطلبات الأخيرة</CardTitle></div><a href="/orders" className="text-sm text-primary hover:underline">عرض الكل</a></CardHeader><CardContent><div className="overflow-x-auto"><table className="luxury-table"><thead><tr><th>الطلب</th><th>العميل</th><th>القيمة</th><th>الحالة</th></tr></thead><tbody>{recentOrders.length ? recentOrders.map((order) => <tr key={order.order_id || order.order_number}><td className="font-semibold">{order.order_number || "—"}</td><td>{order.customer_name || "عميل مونتنيرو"}</td><td className="font-semibold">{money(order.total)}</td><td><span className="status-pill"><Check size={12} /> {order.status || "قيد المعالجة"}</span></td></tr>) : <tr><td colSpan={4} className="empty-row">لا توجد طلبات متاحة حالياً</td></tr>}</tbody></table></div></CardContent></Card>
+        <Card className="luxury-card"><CardHeader className="flex-row items-center justify-between"><div><p className="section-kicker">آخر الحركة</p><CardTitle>آخر مهام المبيعات</CardTitle></div><a href="/orders" className="text-sm text-primary hover:underline">عرض الكل</a></CardHeader><CardContent><div className="overflow-x-auto"><table className="luxury-table"><thead><tr><th>المهمة</th><th>العميل</th><th>الإجراء</th><th>الحالة</th></tr></thead><tbody>{recentOrders.length ? recentOrders.map((task, index) => <tr key={task.task_id || `${task.lead_id}-${index}`}><td className="font-semibold">{task.task_title || "—"}</td><td>{task.name || "—"}</td><td>{task.action || "—"}</td><td><span className="status-pill">{task.status || "—"}</span></td></tr>) : <tr><td colSpan={4} className="empty-row">لا توجد مهام فعلية متاحة حالياً</td></tr>}</tbody></table></div></CardContent></Card>
         <Card className="luxury-card"><CardHeader><p className="section-kicker">نبض المنظومة</p><CardTitle>مؤشرات التشغيل</CardTitle></CardHeader><CardContent><div className="space-y-5"><div className="health-row"><div className="metric-icon small"><Wifi size={17} /></div><div><p>اتصال Google Sheets</p><span>مزامنة خادمية آمنة</span></div><strong>مستقر</strong></div><div className="health-row"><div className="metric-icon small"><Clock3 size={17} /></div><div><p>مهام المتابعة</p><span>تحتاج عناية الفريق</span></div><strong>{summary.openTasks}</strong></div><div className="health-row"><div className="metric-icon small"><Sparkles size={17} /></div><div><p>استوديو المحتوى</p><span>محتوى منشور</span></div><strong>{summary.publishedContent}</strong></div></div></CardContent></Card>
       </section>
       <p className="data-caption">آخر مزامنة: {data.lastUpdated ? new Date(data.lastUpdated).toLocaleString("ar-SA") : "بانتظار الاتصال"} · النطاق: {range}</p>
