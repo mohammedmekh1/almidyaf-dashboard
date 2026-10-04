@@ -29,13 +29,39 @@
 4. `voiceover_ok` range — expanded from 27–32 to 20–50 words
 5. KIE model — switched to `kling/ai-avatar-pro`
 
-## Flow
+## Architecture: Split Workflow (2026-10-04 refactor)
 
+n8n has a 5-minute execution timeout. `kling/ai-avatar-pro` takes ~8 minutes.
+Solution: split into two workflows.
+
+### Workflow 1 — Main (`zQRGyGXZsYH1MGKp`)
 ```
 Schedule (9PM) → Trigger Normalizer → Get Config → Get Ideas
 → Smart Classifier → Lock Idea → OpenAI Content
 → Parse Gemini Output → Quality Gate
-→ ElevenLabs TTS → Google Drive Upload → Share Audio → Extract URL
-→ KIE Create Video → [Wait 30s → Poll → Increment] loop
-→ Success? → Log Success / Log Video Failure
+→ ElevenLabs TTS → Google Drive Audio Upload → Share Audio → Extract URL
+→ KIE Create Video → Save Pending Task (logs sheet, action=pending_kie)
+→ END (no polling loop — avoids 5-min timeout)
+```
+
+Saves to `logs` sheet: `job_id=KIE_task_id`, `action=pending_kie`, `notes=JSON context blob`
+
+### Workflow 2 — KIE Checker (`3vutRqQotisSlwZM`)
+```
+Schedule (every 10 min)
+→ Get Pending Videos (read logs where action=pending_kie)
+→ Filter Pending → Split In Batches (size 1)
+→ Parse Context (restore data from notes JSON)
+→ Smart Classifier shim + Parse Gemini Output shim (provide node interface)
+→ KIE Poll Wan Status → Check Status + Timeout (40 min max)
+→ Video Ready? (IF: is_success OR is_failed)
+     TRUE → Success or Failed?
+              SUCCESS → Extract URL → Download → Drive Upload → Share
+                        → Pre-Publish Builder → YouTube Upload
+                        → Mark Completed → Log Success
+                        → Update Pending Done (action=kie_done)
+                        → Get Ideas → Build Rolling Brief → Auto Ideas
+                        → Parse New Ideas → Append to Sheet
+              FAILED  → Log Video Failure → Update Pending Failed (action=kie_failed)
+     FALSE (still generating) → do nothing, next cycle will check
 ```
