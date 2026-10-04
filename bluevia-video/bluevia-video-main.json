@@ -143,17 +143,8 @@
           ]
         },
         "sendBody": true,
-        "contentType": "json",
-        "body": {
-          "text": "={{ $json.voiceoverScript }}",
-          "model_id": "eleven_multilingual_v2",
-          "voice_settings": {
-            "stability": 0.70,
-            "similarity_boost": 0.82,
-            "style": 0.25,
-            "use_speaker_boost": true
-          }
-        },
+        "specifyBody": "json",
+        "body": "={{ JSON.stringify({ text: $json.voiceoverScript, model_id: 'eleven_multilingual_v2', voice_settings: { stability: 0.70, similarity_boost: 0.82, style: 0.25, use_speaker_boost: true } }) }}",
         "options": {
           "response": {
             "response": {
@@ -332,18 +323,8 @@
           ]
         },
         "sendBody": true,
-        "contentType": "json",
-        "body": {
-          "model": "kling/ai-avatar-pro",
-          "input": {
-            "image_url": "={{ $json.imageUrl }}",
-            "audio_url": "={{ $json.audio_url }}",
-            "prompt": "={{ $json.klingPrompt }}",
-            "aspect_ratio": "9:16",
-            "mode": "pro",
-            "caption": false
-          }
-        },
+        "specifyBody": "json",
+        "body": "={{ JSON.stringify({ model: 'kling/ai-avatar-pro', input: { image_url: $json.imageUrl, audio_url: $json.audio_url, prompt: $json.klingPrompt || 'Professional luxury travel presenter speaking to camera in Arabic', aspect_ratio: '9:16', mode: 'pro', caption: false } }) }}",
         "options": {}
       }
     },
@@ -453,7 +434,8 @@
           "value": {
             "key": "cycle_counter",
             "value": "={{ $('Build Direct Audio URL').item.json.nextCycleCounter }}"
-          }
+          },
+          "matchingColumns": ["key"]
         },
         "options": {}
       },
@@ -487,7 +469,8 @@
           "value": {
             "key": "last_character",
             "value": "={{ $('Build Direct Audio URL').item.json.character }}"
-          }
+          },
+          "matchingColumns": ["key"]
         },
         "options": {}
       },

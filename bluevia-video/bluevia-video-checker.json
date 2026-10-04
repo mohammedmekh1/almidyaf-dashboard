@@ -273,14 +273,8 @@
           ]
         },
         "sendBody": true,
-        "contentType": "json",
-        "body": {
-          "account_id": 111,
-          "media_url": "={{ $json.video_url }}",
-          "caption": "={{ $json.ytTitle }}",
-          "description": "={{ $json.ytDescription }}",
-          "post_type": "short"
-        },
+        "specifyBody": "json",
+        "body": "={{ JSON.stringify({ account_id: 111, media_url: $json.video_url, caption: $json.ytTitle, description: $json.ytDescription, post_type: 'short' }) }}",
         "options": {}
       }
     },
@@ -307,13 +301,8 @@
           ]
         },
         "sendBody": true,
-        "contentType": "json",
-        "body": {
-          "account_id": 42676,
-          "media_url": "={{ $('Build YouTube Caption & Hashtags').item.json.video_url }}",
-          "caption": "={{ $('Build YouTube Caption & Hashtags').item.json.socialCaption }}",
-          "post_type": "video"
-        },
+        "specifyBody": "json",
+        "body": "={{ JSON.stringify({ account_id: 42676, media_url: $('Build YouTube Caption & Hashtags').item.json.video_url, caption: $('Build YouTube Caption & Hashtags').item.json.socialCaption, post_type: 'video' }) }}",
         "options": {}
       }
     },
@@ -340,13 +329,8 @@
           ]
         },
         "sendBody": true,
-        "contentType": "json",
-        "body": {
-          "account_id": 47564,
-          "media_url": "={{ $('Build YouTube Caption & Hashtags').item.json.video_url }}",
-          "caption": "={{ $('Build YouTube Caption & Hashtags').item.json.socialCaption }}",
-          "post_type": "reel"
-        },
+        "specifyBody": "json",
+        "body": "={{ JSON.stringify({ account_id: 47564, media_url: $('Build YouTube Caption & Hashtags').item.json.video_url, caption: $('Build YouTube Caption & Hashtags').item.json.socialCaption, post_type: 'reel' }) }}",
         "options": {}
       }
     },
@@ -373,14 +357,8 @@
           ]
         },
         "sendBody": true,
-        "contentType": "json",
-        "body": {
-          "account_id": 32251,
-          "page_id": 772644459275664,
-          "media_url": "={{ $('Build YouTube Caption & Hashtags').item.json.video_url }}",
-          "caption": "={{ $('Build YouTube Caption & Hashtags').item.json.socialCaption }}",
-          "post_type": "reel"
-        },
+        "specifyBody": "json",
+        "body": "={{ JSON.stringify({ account_id: 32251, page_id: 772644459275664, media_url: $('Build YouTube Caption & Hashtags').item.json.video_url, caption: $('Build YouTube Caption & Hashtags').item.json.socialCaption, post_type: 'reel' }) }}",
         "options": {}
       }
     },
@@ -407,13 +385,8 @@
           ]
         },
         "sendBody": true,
-        "contentType": "json",
-        "body": {
-          "account_id": 38,
-          "media_url": "={{ $('Build YouTube Caption & Hashtags').item.json.video_url }}",
-          "caption": "={{ $('Build YouTube Caption & Hashtags').item.json.socialCaption.slice(0, 280) }}",
-          "post_type": "video"
-        },
+        "specifyBody": "json",
+        "body": "={{ JSON.stringify({ account_id: 38, media_url: $('Build YouTube Caption & Hashtags').item.json.video_url, caption: $('Build YouTube Caption & Hashtags').item.json.socialCaption.slice(0, 280), post_type: 'video' }) }}",
         "options": {}
       }
     },
@@ -440,13 +413,8 @@
           ]
         },
         "sendBody": true,
-        "contentType": "json",
-        "body": {
-          "account_id": 3,
-          "media_url": "={{ $('Build YouTube Caption & Hashtags').item.json.video_url }}",
-          "caption": "={{ $('Build YouTube Caption & Hashtags').item.json.socialCaption }}",
-          "post_type": "video"
-        },
+        "specifyBody": "json",
+        "body": "={{ JSON.stringify({ account_id: 3, media_url: $('Build YouTube Caption & Hashtags').item.json.video_url, caption: $('Build YouTube Caption & Hashtags').item.json.socialCaption, post_type: 'video' }) }}",
         "options": {}
       }
     },
@@ -457,7 +425,7 @@
       "typeVersion": 2,
       "position": [2260, 360],
       "parameters": {
-        "jsCode": "// Collect post IDs from all Blotato responses\nconst ytResult      = $('Blotato — Publish to YouTube').first().json;\nconst tiktokResult  = $('Blotato — Publish to TikTok').first().json;\nconst igResult      = $('Blotato — Publish to Instagram').first().json;\nconst fbResult      = $('Blotato — Publish to Facebook').first().json;\nconst twitterResult = $('Blotato — Publish to X/Twitter').first().json;\nconst threadsResult = $('Blotato — Publish to Threads').first().json;\n\nconst getId = (obj) => obj?.data?.id ?? obj?.id ?? obj?.post_id ?? 'unknown';\n\nconst ytUrl = ytResult?.data?.url ?? ytResult?.url ?? '';\n\nconst blotato_ids = [\n  `yt:${getId(ytResult)}`,\n  `tt:${getId(tiktokResult)}`,\n  `ig:${getId(igResult)}`,\n  `fb:${getId(fbResult)}`,\n  `tw:${getId(twitterResult)}`,\n  `th:${getId(threadsResult)}`\n].join(' | ');\n\nreturn [{\n  json: {\n    blotato_post_ids: blotato_ids,\n    youtube_url: ytUrl,\n    video_url: $('Build YouTube Caption & Hashtags').first().json.video_url,\n    job_id: $('Build YouTube Caption & Hashtags').first().json.job_id,\n    idea_id: $('Build YouTube Caption & Hashtags').first().json.idea_id,\n    timestamp: new Date().toISOString()\n  }\n}];\n"
+        "jsCode": "// Collect post IDs — nodes run sequentially: YT → TikTok → IG → FB → Twitter → Threads → here\nconst getId = (obj) => obj?.data?.id ?? obj?.id ?? obj?.post_id ?? 'unknown';\nconst getUrl = (obj) => obj?.data?.url ?? obj?.url ?? obj?.data?.youtube_url ?? '';\n\nconst ytResult      = $('Blotato — Publish to YouTube').first().json;\nconst tiktokResult  = $('Blotato — Publish to TikTok').first().json;\nconst igResult      = $('Blotato — Publish to Instagram').first().json;\nconst fbResult      = $('Blotato — Publish to Facebook').first().json;\nconst twitterResult = $('Blotato — Publish to X/Twitter').first().json;\nconst threadsResult = $('Blotato — Publish to Threads').first().json;\n\nconst ytUrl = getUrl(ytResult);\n\nconst blotato_ids = [\n  `yt:${getId(ytResult)}`,\n  `tt:${getId(tiktokResult)}`,\n  `ig:${getId(igResult)}`,\n  `fb:${getId(fbResult)}`,\n  `tw:${getId(twitterResult)}`,\n  `th:${getId(threadsResult)}`\n].join(' | ');\n\nconst captions = $('Build YouTube Caption & Hashtags').first().json;\n\nreturn [{\n  json: {\n    blotato_post_ids: blotato_ids,\n    youtube_url: ytUrl,\n    video_url: captions.video_url,\n    job_id: captions.job_id,\n    idea_id: captions.idea_id,\n    timestamp: new Date().toISOString()\n  }\n}];\n"
       }
     },
     {
@@ -486,7 +454,8 @@
             "video_url": "={{ $json.video_url }}",
             "youtube_url": "={{ $json.youtube_url }}",
             "blotato_post_id": "={{ $json.blotato_post_ids }}"
-          }
+          },
+          "matchingColumns": ["job_id"]
         },
         "options": {}
       },
@@ -577,44 +546,37 @@
     },
     "Build YouTube Caption & Hashtags": {
       "main": [
-        [
-          { "node": "Blotato — Publish to YouTube",   "type": "main", "index": 0 },
-          { "node": "Blotato — Publish to TikTok",    "type": "main", "index": 0 },
-          { "node": "Blotato — Publish to Instagram", "type": "main", "index": 0 },
-          { "node": "Blotato — Publish to Facebook",  "type": "main", "index": 0 },
-          { "node": "Blotato — Publish to X/Twitter", "type": "main", "index": 0 },
-          { "node": "Blotato — Publish to Threads",   "type": "main", "index": 0 }
-        ]
+        [{ "node": "Blotato — Publish to YouTube", "type": "main", "index": 0 }]
       ]
     },
     "Blotato — Publish to YouTube": {
       "main": [
-        [{ "node": "Collect Blotato Post IDs", "type": "main", "index": 0 }]
+        [{ "node": "Blotato — Publish to TikTok", "type": "main", "index": 0 }]
       ]
     },
     "Blotato — Publish to TikTok": {
       "main": [
-        [{ "node": "Collect Blotato Post IDs", "type": "main", "index": 1 }]
+        [{ "node": "Blotato — Publish to Instagram", "type": "main", "index": 0 }]
       ]
     },
     "Blotato — Publish to Instagram": {
       "main": [
-        [{ "node": "Collect Blotato Post IDs", "type": "main", "index": 2 }]
+        [{ "node": "Blotato — Publish to Facebook", "type": "main", "index": 0 }]
       ]
     },
     "Blotato — Publish to Facebook": {
       "main": [
-        [{ "node": "Collect Blotato Post IDs", "type": "main", "index": 3 }]
+        [{ "node": "Blotato — Publish to X/Twitter", "type": "main", "index": 0 }]
       ]
     },
     "Blotato — Publish to X/Twitter": {
       "main": [
-        [{ "node": "Collect Blotato Post IDs", "type": "main", "index": 4 }]
+        [{ "node": "Blotato — Publish to Threads", "type": "main", "index": 0 }]
       ]
     },
     "Blotato — Publish to Threads": {
       "main": [
-        [{ "node": "Collect Blotato Post IDs", "type": "main", "index": 5 }]
+        [{ "node": "Collect Blotato Post IDs", "type": "main", "index": 0 }]
       ]
     },
     "Collect Blotato Post IDs": {
