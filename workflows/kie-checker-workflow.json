@@ -1,0 +1,3265 @@
+{
+  "updatedAt": "2026-10-04T16:10:50.933Z",
+  "createdAt": "2026-10-04T13:52:40.063Z",
+  "id": "3vutRqQotisSlwZM",
+  "name": "KIE Video Checker — Islamic Shorts",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 10
+            }
+          ]
+        }
+      },
+      "id": "f9399777-2bd0-4aaf-bf6f-93026f401f24",
+      "name": "Schedule — Every 10 Min",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1NUrA1tG2n_pcm0jiEIY1tUw7ms3nTufhKrbtGXaZsBg",
+          "mode": "list",
+          "cachedResultName": "Islamic Shorts",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1NUrA1tG2n_pcm0jiEIY1tUw7ms3nTufhKrbtGXaZsBg/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 225532818,
+          "mode": "list",
+          "cachedResultName": "logs",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1NUrA1tG2n_pcm0jiEIY1tUw7ms3nTufhKrbtGXaZsBg/edit#gid=225532818"
+        },
+        "options": {}
+      },
+      "id": "49bdf1af-3f48-4d23-a64c-ace9d76e8ff5",
+      "name": "Get Pending Videos",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        224,
+        0
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CRED_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Filter: return only first pending_kie row\nconst rows = $input.all().map(i => i.json);\nconst pending = rows.filter(r => r.action === 'pending_kie');\nif (pending.length === 0) return [];\n// Process one at a time (checker runs every 10 min, handles 1 per cycle)\nreturn [{json: pending[0]}];\n"
+      },
+      "id": "35b06891-6ee2-437d-8df5-3fc92023eabf",
+      "name": "Filter Pending",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse stored context from logs sheet (action=pending_kie)\nconst row = $input.first().json;\n// Context JSON is stored in notes column\nlet ctx = {};\ntry { ctx = JSON.parse(row.notes || '{}'); } catch(e) {}\nreturn [{json: {\n  ...ctx,\n  _task_id: row.job_id,          // KIE task_id stored in job_id column\n  _row_created_at: row.timestamp, // creation time stored in timestamp\n  _pending_row: row\n}}];\n"
+      },
+      "id": "fc999474-76ac-48dd-8f06-400f3e0f3dda",
+      "name": "Parse Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Shim: provides Smart Classifier interface from stored context\nconst d = $('Parse Context').first().json;\nreturn [{json: {\n  job_id: d.job_id || '',\n  idea_id: d.idea_id || '',\n  category: d.category || '',\n  publish_slot: d.publish_slot || '',\n  yt_category_id: d.yt_category_id || '22',\n  category_label: d.category_label || '',\n  final_topic: d.final_topic || '',\n  hook_style: d.hook_style || '',\n  kling_prompt_hint: d.kling_prompt_hint || ''\n}}];\n"
+      },
+      "id": "acca87e6-85ec-4bdc-bc6c-03cb237b41ef",
+      "name": "Smart Classifier",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1104,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Shim: provides Parse Gemini Output interface from stored context\nconst d = $('Parse Context').first().json;\nreturn [{json: {\n  quality_score: d.quality_score || 0,\n  youtube_title: d.youtube_title || '',\n  youtube_description: d.youtube_description || '',\n  youtube_tags: d.youtube_tags || [],\n  voiceover_text: d.voiceover_text || '',\n  voiceover_arabic: d.voiceover_arabic || d.voiceover_text || '',\n  hashtags: d.hashtags || [],\n  kling_prompt: d.kling_prompt || d.wan_prompt_hint || '',\n  wan_prompt_hint: d.wan_prompt_hint || d.kling_prompt || '',\n  final_topic: d.final_topic || '',\n  category: d.category || '',\n  category_label: d.category_label || '',\n  job_id: d.job_id || '',\n  yt_category_id: d.yt_category_id || '22'\n}}];\n"
+      },
+      "id": "e3c2f8a5-c8b8-470b-a09d-2fa6b40f538f",
+      "name": "Parse Gemini Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1328,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.kie.ai/api/v1/jobs/recordInfo?taskId={{ $('Parse Context').first().json._task_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer KIE_BEARER_TOKEN"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "id": "f873d67f-25b0-4e11-bb46-664fcca89395",
+      "name": "KIE — Poll Wan Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1552,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// KIE Status Check — Checker Workflow\n// Called once per 10-min cycle, routes to success/failure/still-pending\nconst input = $input.first().json;\nconst ctx = $('Parse Context').first().json;\n\nconst createdAt = new Date(ctx._row_created_at || new Date());\nconst ageMinutes = (Date.now() - createdAt) / 60000;\nconst TIMEOUT_MINUTES = 40;\n\nconst data = input.data || {};\nconst state = data.successFlag ?? data.state ?? data.status ?? 'pending';\n\nconst isSuccess =\n  state === 1 || state === '1' ||\n  String(state).toLowerCase() === 'success' ||\n  String(state).toLowerCase() === 'succeed' ||\n  String(state).toLowerCase() === 'completed';\n\nconst isFailed =\n  state === 2 || state === 3 || state === '2' || state === '3' ||\n  String(state).toLowerCase() === 'failed' ||\n  String(state).toLowerCase() === 'fail' ||\n  String(state).toLowerCase() === 'error' ||\n  String(state).toLowerCase() === 'timeout';\n\nconst isTimeout = ageMinutes > TIMEOUT_MINUTES;\n\nconst is_success = isSuccess;\nconst is_failed = !isSuccess && (isFailed || isTimeout); // success always wins\n\nconst status_reason = is_failed\n  ? (data.failMsg || data.msg || data.fail_reason ||\n     (isTimeout ? `KIE timeout after ${Math.round(ageMinutes)} min` : 'KIE generation failed'))\n  : '';\n\nreturn [{json: {\n  ...input,\n  is_success,\n  is_failed,\n  is_generating: !is_success && !is_failed,\n  status_reason,\n  _poll_count: 1,\n  elapsed_seconds: Math.round(ageMinutes * 60),\n  data,\n  job_id: ctx.job_id || '',\n  category: ctx.category || '',\n  youtube_title: ctx.youtube_title || ctx.final_topic || '',\n  topic: ctx.final_topic || '',\n  quality_score: ctx.quality_score || 0\n}}];\n"
+      },
+      "id": "b9e8c5d9-00df-4027-ba97-0f59ee8711be",
+      "name": "Check Status + Timeout",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1760,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "8e8f18d4-f0ea-4598-ae4a-adadfb765560",
+              "leftValue": "={{ $json.is_success }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "4ec3af4f-fc01-4423-9ebb-24d422b7dba9",
+              "leftValue": "={{ $json.is_failed }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "1ea18d80-f616-40b6-aa80-c3230bb439bc",
+      "name": "Video Ready? (IF)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1984,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "46966cdd-cee4-40ed-98eb-ec095b112687",
+              "leftValue": "={{ $json.is_success }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "cdd4772c-c9cd-49e0-a6bb-9272163430da",
+      "name": "Success or Failed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2208,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================\n// NODE: Extract Video URL — Wan 2.2 Speech-to-Video\n// يستخرج رابط الفيديو النهائي من ناتج KIE\n// ============================================================\n\nconst raw = $input.first().json;\n\n// 1. فحص الفشل أولاً\nif (raw.is_failed) {\n  throw new Error(`Video generation failed after ${raw.elapsed_seconds}s. Reason: ${raw.status_reason}`);\n}\n\nconst data = raw.data || raw;\n\n// 2. محاولة قراءة resultJson (قد يكون string أو object)\nlet resultJson = data.resultJson || data;\nif (typeof resultJson === 'string') {\n  try { resultJson = JSON.parse(resultJson); } catch (e) {}\n}\n\n// 3. البحث عن رابط الفيديو في كل المواقع الممكنة\nconst candidates = [\n  // المسار الأكثر شيوعاً لـ KIE\n    resultJson?.data?.resultUrls,\n  resultJson?.resultUrls,\n  data?.resultUrls,\n  resultJson?.data?.result_urls,\n  resultJson?.result_urls,\n  data?.result_urls,\n  // مسارات بديلة\n  [resultJson?.data?.video_url],\n  [resultJson?.video_url],\n  [data?.videoUrl],\n  [data?.video_url],\n  [data?.url],\n  // مسار Wan الخاص\n  resultJson?.data?.output?.video_url,\n  resultJson?.output?.video_url,\n  // مسار array مسطح\n  resultJson?.data?.urls,\n  resultJson?.urls\n];\n\nlet videoUrl = null;\n\nfor (const candidate of candidates) {\n  if (!candidate) continue;\n  \n  // إذا كان array\n  if (Array.isArray(candidate) && candidate.length > 0) {\n    const url = String(candidate[0]).trim();\n    if (url.startsWith('http')) {\n      videoUrl = url;\n      break;\n    }\n  }\n  \n  // إذا كان string مباشر\n  if (typeof candidate === 'string' && candidate.startsWith('http')) {\n    videoUrl = candidate.trim();\n    break;\n  }\n}\n\n// 4. إذا لم نجد رابطاً، نرمي خطأ مع تفاصيل للاستكشاف\nif (!videoUrl) {\n  const debugInfo = JSON.stringify({\n    data_keys: Object.keys(data),\n    resultJson_keys: typeof resultJson === 'object' ? Object.keys(resultJson) : 'not_object',\n    successFlag: data.successFlag,\n    state: data.state\n  }).slice(0, 800);\n  \n  throw new Error(`No video URL found in KIE response. Debug: ${debugInfo}`);\n}\n\n// 5. جمع البيانات من العقد السابقة\nconst parseData = $('Parse Gemini Output').first().json;\nconst classData = $('Smart Classifier').first().json;\nconst taskId = $('Parse Context').first().json._task_id || '';\n\nreturn [{\n  json: {\n    ...parseData,\n    ...classData,\n    video_url: videoUrl,\n    kie_task_id: taskId,\n    video_ready_at: new Date().toISOString(),\n    render_model: 'wan-2-2-speech-to-video',\n    total_generation_seconds: raw.elapsed_seconds || 0,\n    poll_count: raw._poll_count || 0\n  }\n}];"
+      },
+      "id": "9a75f876-9588-4695-bb7a-dc1bda9e1f30",
+      "name": "Extract Video URL",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2432,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.video_url }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "video_data"
+            }
+          },
+          "timeout": 150000
+        }
+      },
+      "id": "ec411781-76de-494f-9b27-1154567388b4",
+      "name": "Download Video",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2640,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "inputDataFieldName": "video_data",
+        "name": "=job_{{ $json.job_id }}.mp4",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "root",
+          "cachedResultName": "/ (Root folder)"
+        },
+        "options": {}
+      },
+      "id": "d1f17053-3b03-4c7f-98c7-ec7ab7562e70",
+      "name": "Google Drive Upload",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        2864,
+        0
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "GOOGLE_DRIVE_CRED_ID",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "share",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "permissionsUi": {
+          "permissionsValues": {
+            "role": "reader",
+            "type": "anyone"
+          }
+        },
+        "options": {}
+      },
+      "id": "f3cc37ad-b88b-4036-bc03-10847e9d0110",
+      "name": "Share file",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        3088,
+        0
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "GOOGLE_DRIVE_CRED_ID",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1NUrA1tG2n_pcm0jiEIY1tUw7ms3nTufhKrbtGXaZsBg",
+          "mode": "list",
+          "cachedResultName": "Islamic Shorts",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1NUrA1tG2n_pcm0jiEIY1tUw7ms3nTufhKrbtGXaZsBg/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1250425104,
+          "mode": "list",
+          "cachedResultName": "ideas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1NUrA1tG2n_pcm0jiEIY1tUw7ms3nTufhKrbtGXaZsBg/edit#gid=1250425104"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $('Smart Classifier').first().json.idea_id }}",
+            "google_drive_url": "=https://drive.google.com/file/d/{{ $('Google Drive Upload').first().json.id }}/view"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "32333aab-74e2-46b9-84f0-e0ad421e6d59",
+      "name": "Append or update row in sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        3312,
+        0
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CRED_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================\n// NODE: Pre-Publish Builder — Wan Speech-to-Video\n// ============================================================\n\nconst parseData = $('Parse Gemini Output').first().json;\nconst classData = $('Smart Classifier').first().json;\nconst videoBinary = $('Download Video').first().binary;\n\nif (!videoBinary?.video_data) {\n  throw new Error('Final video binary not found. Expected: Download Video → video_data');\n}\n\nconst data = {\n  ...parseData,\n  yt_category_id: parseData.yt_category_id || classData.yt_category_id || '22',\n  category_label: parseData.category_label || classData.category_label || '',\n  job_id: parseData.job_id || classData.job_id || '',\n  final_topic: parseData.final_topic || classData.final_topic || '',\n  quality_score: parseData.quality_score || 0,\n};\n\n// Title\nlet title = String(\n  parseData.youtube_title ||\n  data.final_topic ||\n  'حين يصمت القلب تتكلم الروح'\n).trim();\n\ntitle = title\n  .replace(/[\\u{1F000}-\\u{1FFFF}\\u{2600}-\\u{27FF}]/gu, '')\n  .trim();\n\nif ([...title].length > 80) {\n  title = [...title].slice(0, 77).join('').trim() + '...';\n}\n\n// Hashtags\nlet finalTags = Array.isArray(parseData.hashtags)\n  ? parseData.hashtags\n  : String(parseData.hashtags || '').split(/\\s+/);\n\nfinalTags = finalTags\n  .map(tag => String(tag)\n    .trim()\n    .replace(/[\\u{1F000}-\\u{1FFFF}\\u{2600}-\\u{27FF}]/gu, '')\n    .trim()\n  )\n  .filter(Boolean)\n  .map(tag => tag.startsWith('#') ? tag : '#' + tag)\n  .filter(tag => /^#[\\w\\u0600-\\u06FF]+$/.test(tag));\n\nfinalTags = [...new Set(finalTags)].slice(0, 12);\n\nconst cleanTags = finalTags.map(tag => tag.replace('#', ''));\nconst hashBlock = finalTags.join(' ');\n\n// Description\nlet baseDesc = String(parseData.youtube_description || '').trim();\n\nbaseDesc = baseDesc\n  .replace(/[\\u{1F000}-\\u{1FFFF}\\u{2600}-\\u{27FF}]/gu, '')\n  .trim();\n\nconst finalDescription = [\n  baseDesc,\n  '',\n  hashBlock,\n  '',\n  'اشترك للمزيد من الفيديوهات الإسلامية الفكرية والتأملية.',\n  'محتوى مرئي بالذكاء الاصطناعي لأغراض التدبر والتفكر.'\n].join('\\n');\n\n// Scheduling\nconst TIMEZONE_OFFSET_HOURS = 3;\n\nconst now = new Date();\nconst localNow = new Date(\n  now.getTime() + TIMEZONE_OFFSET_HOURS * 60 * 60 * 1000\n);\n\nconst publishAt = new Date(localNow);\npublishAt.setUTCHours(21, 0, 0, 0);\n\nif (publishAt <= localNow) {\n  publishAt.setUTCDate(publishAt.getUTCDate() + 1);\n}\n\nconst publishAtUtc = new Date(\n  publishAt.getTime() - TIMEZONE_OFFSET_HOURS * 60 * 60 * 1000\n);\n\n// Voiceover statistics\nconst voiceover = String(parseData.voiceover_arabic || '');\nconst voiceWords = voiceover.split(/\\s+/).filter(Boolean).length;\n\nreturn [{\n  json: {\n    ...data,\n    final_title: title,\n    final_description: finalDescription,\n    final_tags: finalTags,\n    clean_tags: cleanTags,\n    scheduled_publish_at: publishAtUtc.toISOString(),\n\n    qa_summary: {\n      title_chars: [...title].length,\n      hashtags_count: finalTags.length,\n      quality_score: parseData.quality_score,\n      category: data.category_label || parseData.category,\n      render_model: 'wan/2-2-a14b-speech-to-video-turbo',\n      production_mode: 'speech_to_video',\n      audio_source: 'elevenlabs/text-to-dialogue-v3',\n      voiceover_words: voiceWords,\n      voiceover_ok: voiceWords >= 28 && voiceWords <= 48,\n      video_synced: true\n    }\n  },\n\n  binary: videoBinary\n}];"
+      },
+      "id": "20f5e674-5a6f-418d-b1b1-8ba723aa304d",
+      "name": "Pre-Publish Builder",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3520,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "video",
+        "operation": "upload",
+        "title": "={{ $json.final_title }}",
+        "regionCode": "IN",
+        "categoryId": "={{ $json.yt_category_id }}",
+        "binaryProperty": "video_data",
+        "options": {
+          "description": "={{ $json.final_description }}",
+          "notifySubscribers": true,
+          "privacyStatus": "private",
+          "publicStatsViewable": true,
+          "selfDeclaredMadeForKids": false,
+          "tags": "={{ $json.clean_tags.join(',') }}"
+        }
+      },
+      "id": "19121fd8-24de-4329-bbe7-5480da545ea1",
+      "name": "YouTube Upload",
+      "type": "n8n-nodes-base.youTube",
+      "typeVersion": 1,
+      "position": [
+        3744,
+        0
+      ],
+      "credentials": {
+        "youTubeOAuth2Api": {
+          "id": "05Gk7WAFmZEbchQz",
+          "name": "YouTube account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1NUrA1tG2n_pcm0jiEIY1tUw7ms3nTufhKrbtGXaZsBg",
+          "mode": "list",
+          "cachedResultName": "Islamic Shorts",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1NUrA1tG2n_pcm0jiEIY1tUw7ms3nTufhKrbtGXaZsBg/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1250425104,
+          "mode": "list",
+          "cachedResultName": "ideas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1NUrA1tG2n_pcm0jiEIY1tUw7ms3nTufhKrbtGXaZsBg/edit#gid=1250425104"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $('Smart Classifier').first().json.idea_id }}",
+            "production_status": "completed",
+            "youtube_url": "=https://youtube.com/watch?v={{ $json.id }}",
+            "quality_score": "={{ $('Parse Gemini Output').first().json.quality_score }}",
+            "job_id": "={{ $('Smart Classifier').first().json.job_id }}",
+            "youtube_title": "={{ $('Parse Gemini Output').first().json.youtube_title }}",
+            "scheduled_date": "={{ $now.toFormat('yyyy-MM-dd') }}",
+            "scheduled_time": "={{ $('Smart Classifier').first().json.best_publish_time }}",
+            "notes": "=✅ Published {{ $now.toISO() }}",
+            "category": "={{ $('Parse Gemini Output').first().json.category }}",
+            "hashtags": "={{ $('Parse Gemini Output').first().json.hashtags.join(' ') }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "idea",
+              "displayName": "idea",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "category",
+              "displayName": "category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "production_status",
+              "displayName": "production_status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "priority",
+              "displayName": "priority",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "scheduled_date",
+              "displayName": "scheduled_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "scheduled_time",
+              "displayName": "scheduled_time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "kling_prompt",
+              "displayName": "kling_prompt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "youtube_title",
+              "displayName": "youtube_title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "hashtags",
+              "displayName": "hashtags",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "quality_score",
+              "displayName": "quality_score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "youtube_url",
+              "displayName": "youtube_url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "job_id",
+              "displayName": "job_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "google_drive_url",
+              "displayName": "google_drive_url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "notes",
+              "displayName": "notes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "2e972fc2-0f3a-44f9-85e5-7c1d26709df5",
+      "name": "Mark Completed",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        3968,
+        0
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CRED_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1NUrA1tG2n_pcm0jiEIY1tUw7ms3nTufhKrbtGXaZsBg",
+          "mode": "list",
+          "cachedResultName": "Islamic Shorts",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1NUrA1tG2n_pcm0jiEIY1tUw7ms3nTufhKrbtGXaZsBg/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 225532818,
+          "mode": "list",
+          "cachedResultName": "logs",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1NUrA1tG2n_pcm0jiEIY1tUw7ms3nTufhKrbtGXaZsBg/edit#gid=225532818"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "timestamp": "={{ $now.toISO() }}",
+            "job_id": "={{ $('Smart Classifier').first().json.job_id }}",
+            "category": "={{ $('Smart Classifier').first().json.category }}",
+            "topic": "={{ $('Pre-Publish Builder').first().json.final_title }}",
+            "quality_score": "={{ $('Parse Gemini Output').first().json.quality_score }}",
+            "action": "published",
+            "youtube_url": "=https://youtube.com/watch?v={{ $('YouTube Upload').first().json.id }}",
+            "notes": "=Auto-published successfully. Slot: {{ $('Smart Classifier').first().json.publish_slot }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "timestamp",
+              "displayName": "timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "job_id",
+              "displayName": "job_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "category",
+              "displayName": "category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "topic",
+              "displayName": "topic",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "quality_score",
+              "displayName": "quality_score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "action",
+              "displayName": "action",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "youtube_url",
+              "displayName": "youtube_url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "notes",
+              "displayName": "notes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "id": "4b9cd0cf-d250-4701-a92f-f7f5ccb8d345",
+      "name": "Log Success",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        4192,
+        0
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CRED_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1NUrA1tG2n_pcm0jiEIY1tUw7ms3nTufhKrbtGXaZsBg",
+          "mode": "list",
+          "cachedResultName": "Islamic Shorts",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1NUrA1tG2n_pcm0jiEIY1tUw7ms3nTufhKrbtGXaZsBg/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 225532818,
+          "mode": "list",
+          "cachedResultName": "logs",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1NUrA1tG2n_pcm0jiEIY1tUw7ms3nTufhKrbtGXaZsBg/edit#gid=225532818"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "job_id": "={{ $('Parse Context').first().json._task_id }}",
+            "action": "kie_done",
+            "youtube_url": "=https://youtube.com/watch?v={{ $('YouTube Upload').first().json.id }}",
+            "row_number": 0
+          },
+          "matchingColumns": [
+            "job_id"
+          ],
+          "schema": [
+            {
+              "id": "timestamp",
+              "displayName": "timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "job_id",
+              "displayName": "job_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "category",
+              "displayName": "category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "topic",
+              "displayName": "topic",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "quality_score",
+              "displayName": "quality_score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "action",
+              "displayName": "action",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "youtube_url",
+              "displayName": "youtube_url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "notes",
+              "displayName": "notes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "b9d81ad5-f190-4f17-beae-f615de46e9f5",
+      "name": "Update Pending Done",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        4400,
+        0
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CRED_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1NUrA1tG2n_pcm0jiEIY1tUw7ms3nTufhKrbtGXaZsBg",
+          "mode": "list",
+          "cachedResultName": "Islamic Shorts",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1NUrA1tG2n_pcm0jiEIY1tUw7ms3nTufhKrbtGXaZsBg/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1250425104,
+          "mode": "list",
+          "cachedResultName": "ideas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1NUrA1tG2n_pcm0jiEIY1tUw7ms3nTufhKrbtGXaZsBg/edit#gid=1250425104"
+        },
+        "options": {
+          "outputFormatting": {
+            "values": {
+              "general": "UNFORMATTED_VALUE",
+              "date": "FORMATTED_STRING"
+            }
+          }
+        }
+      },
+      "id": "cf0515cb-f52b-4a8d-acca-bad3ad29872f",
+      "name": "Get Ideas (ideas sheet)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        4624,
+        0
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CRED_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================\n// Build Rolling Idea Bank Brief\n// نظام اقتصادي: يولد 3 أفكار فقط عند فراغ أفكار الأيام القادمة\n// ============================================================\n\nconst classifier = $('Smart Classifier').first().json;\nconst sheetRows = $('Get Ideas (ideas sheet)').all().map(item => item.json || {});\n\n// دورة التصنيفات الأساسية\nconst CATEGORIES = [\n  {\n    id: 'tamal_qurani',\n    label: 'تأمل قرآني',\n    angles: [\n      'آية مألوفة يتغير معناها حين يتغير سؤال القلب',\n      'الفرق بين تلاوة الآية وسماعها بالقلب',\n      'كيف يوقظ القرآن سؤالًا نائمًا في النفس',\n      'المعنى الذي نراه حين نبطئ أمام الآية',\n      'القرآن بوصفه مرآة للحالة الداخلية',\n      'السكوت الذي تفتحه آية واحدة',\n      'لماذا تأتي بعض الآيات في وقتها تمامًا',\n      'التدبر حين يتحول النص إلى صحبة'\n    ]\n  },\n  {\n    id: 'tamal_kawni',\n    label: 'تأمل كوني',\n    angles: [\n      'بطء الفجر وكيف يعلّم القلب التدرج',\n      'اتساع السماء أمام ضيق الإنسان',\n      'المطر بوصفه درسًا في الانتظار',\n      'تعاقب الليل والنهار ومعنى البداية الجديدة',\n      'هدوء الأشياء العظيمة في الطبيعة',\n      'النجوم ومعنى الثبات وسط البعد',\n      'الريح وما لا نراه لكنه يغيرنا',\n      'تبدل الفصول ومعنى عدم دوام الحال'\n    ]\n  },\n  {\n    id: 'muraqabat_nafs',\n    label: 'مراقبة النفس',\n    angles: [\n      'الصدق مع النفس حين لا يرانا أحد',\n      'الفرق بين الندم وجلد الذات',\n      'التبرير الداخلي الذي يخفي الحقيقة',\n      'مراقبة النية قبل مراقبة النتائج',\n      'العيوب التي نرى أثرها ولا نرى أصلها',\n      'الصمت قبل الحكم على الآخرين',\n      'العودة إلى النفس بعد الزلل',\n      'كيف تكشف الخلوة حقيقة القلب'\n    ]\n  },\n  {\n    id: 'ilm_wa_marifa',\n    label: 'علم ومعرفة',\n    angles: [\n      'المعرفة التي تجعل الإنسان أكثر تواضعًا',\n      'الفرق بين كثرة المعلومات وعمق الفهم',\n      'العلم الذي يهدئ العقل بدل أن يثقله',\n      'السؤال الصادق بوصفه بداية معرفة',\n      'التأمل قبل الحكم السريع',\n      'القراءة التي تغيّر طريقة النظر',\n      'المعنى الذي لا تمنحه الإجابات الجاهزة',\n      'كيف يتحول العلم إلى تهذيب للنفس'\n    ]\n  },\n  {\n    id: 'rihlah_ruhiya',\n    label: 'رحلة روحية',\n    angles: [\n      'السفر الداخلي الذي يبدأ من الصمت',\n      'العودة إلى الله بعد طول التشتت',\n      'الطريق الذي يتغير حين تتغير النية',\n      'الغربة التي تكشف ما يحتاجه القلب',\n      'الخطوة الصغيرة التي تغير اتجاه الروح',\n      'الرحلة بين ما نريده وما نحتاجه',\n      'البحث عن المعنى وسط الزحام',\n      'كيف يصبح التأمل طريقًا لا لحظة'\n    ]\n  },\n  {\n    id: 'rida_wa_sakina',\n    label: 'رضا وسكينة',\n    angles: [\n      'الرضا حين تتأخر الإجابة',\n      'السكينة وسط ما لا نستطيع تفسيره',\n      'قبول ما لا نملك تغييره',\n      'الفرق بين الاستسلام والرضا',\n      'الهدوء بعد الفقد أو الخيبة',\n      'كيف يتخفف القلب من مقاومة الواقع',\n      'الطمأنينة التي لا تعتمد على الظروف',\n      'الراحة حين نتوقف عن سؤال لماذا دائمًا'\n    ]\n  },\n  {\n    id: 'dhikr_wa_tasbih',\n    label: 'ذكر وتسبيح',\n    angles: [\n      'الذكر حين يعجز القلب عن الشرح',\n      'التسبيح بوصفه إعادة ترتيب للداخل',\n      'كلمة ذكر صغيرة في لحظة ثقيلة',\n      'الذكر بين ضجيج العالم وصمت القلب',\n      'كيف يعيد الذكر الإنسان إلى نفسه',\n      'الحضور القلبي بدل تكرار الكلمات فقط',\n      'الذكر حين يختلط الخوف بالرجاء',\n      'التسبيح بوصفه تنفّسًا روحيًا'\n    ]\n  },\n  {\n    id: 'sabr_wa_thabat',\n    label: 'صبر وثبات',\n    angles: [\n      'الصبر الذي لا يحتاج إلى ادعاء القوة',\n      'الثبات حين يثقل الطريق',\n      'الفرق بين الصبر وتأجيل الألم',\n      'الاستمرار رغم غياب الإجابات',\n      'كيف لا نغادر أنفسنا في التعب',\n      'الصبر بوصفه حضورًا لا انتظارًا فقط',\n      'القوة الهادئة بعد الانكسار',\n      'الثبات في التفاصيل الصغيرة اليومية'\n    ]\n  }\n];\n\nconst blockedStatuses = new Set([\n  'completed',\n  'in_progress',\n  'rejected',\n  'failed',\n  'skipped'\n]);\n\nfunction text(value) {\n  return String(value || '').trim();\n}\n\nfunction isReadyIdea(row) {\n  const status = text(row.production_status).toLowerCase();\n\n  return (\n    text(row.idea).length > 20 &&\n    !blockedStatuses.has(status)\n  );\n}\n\n// تحديد ترتيب فئة اليوم\nlet currentIndex = Number(classifier.category_rotation_index);\n\nif (!Number.isInteger(currentIndex) || currentIndex < 0) {\n  currentIndex = CATEGORIES.findIndex(item => item.id === classifier.category);\n}\n\nif (currentIndex < 0) currentIndex = 0;\n\n// نأخذ فئات الأيام الثلاثة القادمة فقط\nconst nextThreeCategories = [1, 2, 3].map(offset => {\n  return CATEGORIES[(currentIndex + offset) % CATEGORIES.length];\n});\n\n// الأفكار الجاهزة الموجودة فعليًا لكل فئة من الفئات القادمة\nconst futureStats = nextThreeCategories.map(category => {\n  const allCategoryIdeas = sheetRows.filter(row => {\n    return text(row.category) === category.id;\n  });\n\n  const readyIdeas = allCategoryIdeas.filter(isReadyIdea);\n\n  return {\n    id: category.id,\n    label: category.label,\n    readyCount: readyIdeas.length,\n    totalHistoryCount: allCategoryIdeas.filter(row => text(row.idea)).length,\n    angles: category.angles\n  };\n});\n\n// كم فئة قادمة لديها فكرة جاهزة؟\nconst coveredFutureCategories = futureStats.filter(item => {\n  return item.readyCount > 0;\n}).length;\n\n// سياسة التوفير:\n// لا يستدعي OpenAI إلا إذا لم توجد ولا فكرة واحدة\n// للتصنيفات الثلاثة القادمة.\nconst shouldGenerate = coveredFutureCategories === 0;\n\n// إذا لدينا مخزون ولو بسيط، لا نرسل أي Item للعقدة التالية.\n// هذا يعني أن Auto Idea Generator لن يعمل ولن يستهلك رصيدًا.\nif (!shouldGenerate) {\n  return [];\n}\n\n// تجهيز 3 فئات + 3 زوايا مختلفة\nconst categoryPlan = futureStats.map((item, index) => {\n  const angleIndex = item.totalHistoryCount % item.angles.length;\n  const selectedAngle = item.angles[angleIndex];\n\n  return {\n    order: index + 1,\n    id: item.id,\n    label: item.label,\n    required_angle: selectedAngle\n  };\n});\n\n// نرسل فقط آخر 8 أفكار من كل تصنيف لتقليل Tokens\nconst previousIdeasForPrompt = categoryPlan.map(plan => {\n  const ideas = sheetRows\n    .filter(row => text(row.category) === plan.id && text(row.idea))\n    .slice(-8)\n    .map((row, index) => {\n      return `${index + 1}. ${text(row.idea).slice(0, 350)}`;\n    });\n\n  return [\n    `CATEGORY: ${plan.id} — ${plan.label}`,\n    ideas.length ? ideas.join('\\n') : 'No previous ideas stored for this category.'\n  ].join('\\n');\n}).join('\\n\\n---\\n\\n').slice(0, 6500);\n\nconst categoryPlanText = categoryPlan.map(plan => {\n  return [\n    `${plan.order}. category: ${plan.id}`,\n    `Arabic label: ${plan.label}`,\n    `Required fresh philosophical angle: ${plan.required_angle}`\n  ].join(' | ');\n}).join('\\n');\n\nreturn [{\n  json: {\n    should_generate: true,\n    generation_mode: 'rolling_3_day_buffer',\n    generation_count: 3,\n\n    generated_at: new Date().toISOString(),\n    source_job_id: classifier.job_id,\n\n    current_category: classifier.category,\n    current_category_label: classifier.category_label,\n\n    category_plan: categoryPlan,\n    category_plan_text: categoryPlanText,\n\n    previous_ideas_text: previousIdeasForPrompt,\n\n    coverage_before_generation: {\n      next_categories: futureStats.map(item => ({\n        category: item.id,\n        ready_ideas: item.readyCount\n      })),\n      covered_future_categories: coveredFutureCategories\n    }\n  }\n}];"
+      },
+      "id": "b2121355-abe6-4aff-bb27-3d8ac3074843",
+      "name": "Build Rolling Idea Bank Brief",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4848,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Create exactly 3 new Islamic philosophical YouTube Shorts ideas.\n\nYou must create exactly one idea for each category below.\n\nCATEGORY PLAN:\n{{ $json.category_plan_text }}\n\nPREVIOUS IDEAS:\n{{ $json.previous_ideas_text }}\n\nSTRICT REQUIREMENTS:\n\n1. Keep the category order exactly as listed in CATEGORY PLAN.\n2. Create exactly 3 JSON objects only.\n3. Each idea must use the exact category_id from the plan.\n4. Each Arabic idea must be 2 to 4 meaningful sentences.\n5. The first sentence must create calm curiosity, philosophical tension, or inner reflection.\n6. Do not repeat any idea, wording, theme, or philosophical angle from PREVIOUS IDEAS.\n7. Do not create direct religious rulings, fabricated quotes, Quran verses, or hadith.\n8. Keep the visual concept realistic, calm, cinematic, and compatible with a single speaking portrait of Nur.\n9. The English visual prompt must mention:\n   - young veiled Arab woman named Nur\n   - medium close-up\n   - visible lips\n   - calm natural facial movement\n   - soft cinematic lighting\n   - subtle camera movement\n   - vertical 9:16\n   - no text, no subtitles, no watermark, no extra people\n\nReturn ONLY this raw JSON array:\n\n[\n  {\n    \"category\": \"exact_category_id_from_plan\",\n    \"angle\": \"short Arabic description of the philosophical angle\",\n    \"idea\": \"Arabic idea in elegant Modern Standard Arabic\",\n    \"kling_prompt\": \"English visual direction prompt suitable for Wan speech-to-video\",\n    \"priority\": \"medium\"\n  }\n]\n\nReturn exactly 3 objects.\nReturn JSON only.",
+        "options": {
+          "systemMessage": "=You are a senior editorial planner for a premium Arabic Islamic YouTube Shorts channel.\n\nCreate original, dignified, emotionally engaging, and intellectually meaningful Islamic philosophical ideas.\n\nThe channel features a young veiled Arab woman named Nur in serene and cinematic settings.\n\nYou must follow these rules:\n\n- Use Modern Standard Arabic only in Arabic fields.\n- No emojis, slang, colloquial language, cheap motivation, fear tactics, or shallow preaching.\n- No CCTV, accidents, rescues, violence, crime, gore, blood, weapons, action scenes, comedy, controversy, or politics.\n- Do not fabricate Quran verses, hadith, religious quotations, or legal religious rulings.\n- Do not repeat, paraphrase, or recreate philosophical angles from the provided previous ideas.\n- Every idea must have an elegant opening that creates curiosity or emotional reflection.\n- The visual prompt must be English only.\n- The visual scene must be compatible with a single image-to-speech video featuring Nur.\n- One veiled Arab woman only, medium close-up, visible lips, calm facial movement, subtle natural camera movement.\n- No subtitles, no text overlays, no logos, no watermark, no extra people.\n\nReturn strictly valid raw JSON only.\nDo not return markdown.\nDo not write explanations outside the JSON array."
+        }
+      },
+      "id": "6bd951db-ac18-4610-ac3f-0fd0eca619f6",
+      "name": "Auto Idea Generator",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        4816,
+        -336
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "gpt-4o"
+        },
+        "options": {}
+      },
+      "id": "ba250fcf-dec3-4f49-93b1-5e56679883e2",
+      "name": "OpenAI Chat Model (Ideas)",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        5072,
+        -208
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "OPENAI_CRED_ID",
+          "name": "OpenAi accountalmydiaf"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================\n// Parse New Ideas\n// يتحقق من 3 أفكار إسلامية قبل حفظها في شيت ideas\n// ============================================================\n\nconst aiResponse = $input.first().json;\nconst brief = $('Build Rolling Idea Bank Brief').first().json;\nconst sheetRows = $('Get Ideas (ideas sheet)').all().map(item => item.json || {});\n\n// استخراج الرد من Agent\nlet raw =\n  aiResponse.output ??\n  aiResponse.text ??\n  aiResponse.message?.content ??\n  aiResponse.choices?.[0]?.message?.content ??\n  '';\n\nif (typeof raw !== 'string') {\n  raw = JSON.stringify(raw);\n}\n\nlet clean = raw\n  .replace(/^\\uFEFF/, '')\n  .replace(/```json/gi, '')\n  .replace(/```/g, '')\n  .replace(/[\\u201C\\u201D]/g, '\"')\n  .trim();\n\nlet generatedIdeas = [];\nlet parseError = '';\n\ntry {\n  const match = clean.match(/\\[[\\s\\S]*\\]/);\n\n  if (!match) {\n    throw new Error('No JSON array found in AI response');\n  }\n\n  generatedIdeas = JSON.parse(match[0]);\n\n  if (!Array.isArray(generatedIdeas)) {\n    throw new Error('Response is not an array');\n  }\n} catch (error) {\n  parseError = String(error.message || error);\n  generatedIdeas = [];\n}\n\n// تنظيف النص العربي للمقارنة\nfunction normalizeArabic(value) {\n  return String(value || '')\n    .toLowerCase()\n    .replace(/[\\u064B-\\u065F\\u0670]/g, '')\n    .replace(/[أإآ]/g, 'ا')\n    .replace(/ة/g, 'ه')\n    .replace(/ى/g, 'ي')\n    .replace(/[^\\u0600-\\u06FFa-z0-9\\s]/gi, ' ')\n    .replace(/\\s+/g, ' ')\n    .trim();\n}\n\nconst STOP_WORDS = new Set([\n  'في', 'من', 'الى', 'إلى', 'عن', 'على', 'مع', 'هذا', 'هذه',\n  'ذلك', 'تلك', 'التي', 'الذي', 'أن', 'ان', 'لا', 'ما', 'ثم',\n  'قد', 'كان', 'تكون', 'ليس', 'كل', 'حين', 'عند', 'بعد', 'قبل',\n  'هو', 'هي', 'كما', 'لكن', 'لعل', 'بين', 'حتى', 'أو', 'و'\n]);\n\nfunction meaningfulTokens(value) {\n  return [...new Set(\n    normalizeArabic(value)\n      .split(/\\s+/)\n      .filter(token => token.length >= 3)\n      .filter(token => !STOP_WORDS.has(token))\n  )];\n}\n\nfunction similarityScore(a, b) {\n  const tokensA = meaningfulTokens(a);\n  const tokensB = meaningfulTokens(b);\n\n  if (!tokensA.length || !tokensB.length) return 0;\n\n  const setA = new Set(tokensA);\n  const setB = new Set(tokensB);\n\n  let intersection = 0;\n\n  for (const token of setA) {\n    if (setB.has(token)) intersection++;\n  }\n\n  const union = new Set([...setA, ...setB]).size;\n\n  return union ? intersection / union : 0;\n}\n\nfunction isTooSimilar(candidate, previous) {\n  const candidateNormalized = normalizeArabic(candidate);\n  const previousNormalized = normalizeArabic(previous);\n\n  if (!candidateNormalized || !previousNormalized) return false;\n\n  if (candidateNormalized === previousNormalized) return true;\n\n  const score = similarityScore(candidate, previous);\n\n  return score >= 0.62;\n}\n\nfunction cleanText(value) {\n  return String(value || '')\n    .replace(/[\\u{1F000}-\\u{1FFFF}\\u{2600}-\\u{27FF}]/gu, '')\n    .replace(/\\s+/g, ' ')\n    .trim();\n}\n\nfunction isValidArabicIdea(value) {\n  const text = cleanText(value);\n\n  return (\n    text.length >= 100 &&\n    /[\\u0600-\\u06FF]/.test(text)\n  );\n}\n\nfunction isValidPrompt(value) {\n  const text = cleanText(value);\n\n  const forbidden = /cctv|rescue|accident|gore|blood|violence|weapon|crime|crowd/i;\n\n  return (\n    text.length >= 120 &&\n    !/[\\u0600-\\u06FF]/.test(text) &&\n    !forbidden.test(text) &&\n    /9:16/i.test(text) &&\n    /veiled|hijab/i.test(text) &&\n    /lips/i.test(text)\n  );\n}\n\nfunction getFutureDate(daysAhead) {\n  const date = new Date();\n  date.setUTCDate(date.getUTCDate() + daysAhead);\n  return date.toISOString().slice(0, 10);\n}\n\n// الخطة التي حددتها عقدة Build Rolling Idea Bank Brief\nconst categoryPlan = Array.isArray(brief.category_plan)\n  ? brief.category_plan\n  : [];\n\nif (categoryPlan.length !== 3) {\n  throw new Error('Invalid category plan. Expected exactly 3 categories.');\n}\n\n// جميع الأفكار السابقة، مرتبة حسب الفئة\nconst previousByCategory = {};\n\nfor (const row of sheetRows) {\n  const category = cleanText(row.category);\n  const idea = cleanText(row.idea);\n\n  if (!category || !idea) continue;\n\n  if (!previousByCategory[category]) {\n    previousByCategory[category] = [];\n  }\n\n  previousByCategory[category].push(idea);\n}\n\n// نستخدم كل الأفكار السابقة لمنع التكرار\nconst acceptedIdeasByCategory = {};\n\nconst output = [];\nconst timestamp = Date.now();\n\nfor (let index = 0; index < categoryPlan.length; index++) {\n  const plan = categoryPlan[index];\n\n  // نبحث عن العنصر المطابق للفئة المطلوبة\n  const candidate = generatedIdeas.find(item => {\n    return cleanText(item.category) === plan.id;\n  });\n\n  if (!candidate) {\n    continue;\n  }\n\n  const idea = cleanText(candidate.idea);\n  const visualPrompt = cleanText(candidate.kling_prompt);\n  const angle = cleanText(candidate.angle);\n\n  // تحقق من جودة الفكرة\n  if (!isValidArabicIdea(idea)) {\n    continue;\n  }\n\n  // تحقق من جودة Visual Prompt\n  if (!isValidPrompt(visualPrompt)) {\n    continue;\n  }\n\n  const oldIdeas = previousByCategory[plan.id] || [];\n  const acceptedInSameCategory = acceptedIdeasByCategory[plan.id] || [];\n\n  const duplicatedWithOld = oldIdeas.some(oldIdea => {\n    return isTooSimilar(idea, oldIdea);\n  });\n\n  const duplicatedInBatch = acceptedInSameCategory.some(newIdea => {\n    return isTooSimilar(idea, newIdea);\n  });\n\n  // لا نضيف الفكرة إن كانت متكررة أو قريبة جدًا\n  if (duplicatedWithOld || duplicatedInBatch) {\n    continue;\n  }\n\n  if (!acceptedIdeasByCategory[plan.id]) {\n    acceptedIdeasByCategory[plan.id] = [];\n  }\n\n  acceptedIdeasByCategory[plan.id].push(idea);\n\n  let priority = cleanText(candidate.priority).toLowerCase();\n\n  if (!['high', 'medium'].includes(priority)) {\n    priority = 'medium';\n  }\n\n  output.push({\n    json: {\n      id: `auto_rolling_${timestamp}_${index + 1}`,\n\n      idea,\n      category: plan.id,\n\n      production_status: 'pending',\n      priority,\n\n      // الفكرة الأولى تحتاج غالبًا غدًا، الثانية بعد غد، الثالثة بعده\n      scheduled_date: getFutureDate(index + 1),\n      scheduled_time: '21:00',\n\n      // اسم العمود يبقى kling_prompt لتوافق الشيت والكود القديم\n      kling_prompt: visualPrompt,\n\n      youtube_title: '',\n      hashtags: '',\n\n      notes: [\n        'auto-generated rolling idea bank',\n        `angle=${angle || plan.required_angle || 'not_specified'}`,\n        `category=${plan.id}`,\n        `parseError=${parseError || 'none'}`\n      ].join(' | ')\n    }\n  });\n}\n\nreturn output;"
+      },
+      "id": "4d6031d7-bed8-4adf-a1c3-d798f3423c7c",
+      "name": "Parse New Ideas",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5280,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1NUrA1tG2n_pcm0jiEIY1tUw7ms3nTufhKrbtGXaZsBg",
+          "mode": "list",
+          "cachedResultName": "Islamic Shorts",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1NUrA1tG2n_pcm0jiEIY1tUw7ms3nTufhKrbtGXaZsBg/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1250425104,
+          "mode": "list",
+          "cachedResultName": "ideas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1NUrA1tG2n_pcm0jiEIY1tUw7ms3nTufhKrbtGXaZsBg/edit#gid=1250425104"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $json.id }}",
+            "idea": "={{ $json.idea }}",
+            "category": "={{ $json.category }}",
+            "production_status": "={{ $json.production_status }}",
+            "priority": "={{ $json.priority }}",
+            "scheduled_time": "={{ $json.scheduled_time }}",
+            "youtube_title": "={{ $json.youtube_title }}",
+            "hashtags": "={{ $json.hashtags }}",
+            "notes": "={{ $json.notes }}",
+            "scheduled_date": "={{ $json.scheduled_date }}",
+            "kling_prompt": "={{ $json.kling_prompt }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "idea",
+              "displayName": "idea",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "category",
+              "displayName": "category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "production_status",
+              "displayName": "production_status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "priority",
+              "displayName": "priority",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "scheduled_date",
+              "displayName": "scheduled_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "scheduled_time",
+              "displayName": "scheduled_time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "kling_prompt",
+              "displayName": "kling_prompt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "youtube_title",
+              "displayName": "youtube_title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "hashtags",
+              "displayName": "hashtags",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "quality_score",
+              "displayName": "quality_score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "youtube_url",
+              "displayName": "youtube_url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "job_id",
+              "displayName": "job_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "google_drive_url",
+              "displayName": "google_drive_url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "notes",
+              "displayName": "notes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "d08cd161-4985-4511-b32f-fcbb441eb7b1",
+      "name": "Append New Ideas to Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        5504,
+        0
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CRED_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1NUrA1tG2n_pcm0jiEIY1tUw7ms3nTufhKrbtGXaZsBg",
+          "mode": "list",
+          "cachedResultName": "Islamic Shorts",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1NUrA1tG2n_pcm0jiEIY1tUw7ms3nTufhKrbtGXaZsBg/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 225532818,
+          "mode": "list",
+          "cachedResultName": "logs",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1NUrA1tG2n_pcm0jiEIY1tUw7ms3nTufhKrbtGXaZsBg/edit#gid=225532818"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "timestamp": "={{ new Date().toISOString() }}",
+            "job_id": "={{ .data?.taskId || .job_id || '' }}",
+            "category": "={{ .category || '' }}",
+            "topic": "={{ .youtube_title || .topic || .idea || '' }}",
+            "quality_score": "={{ .quality_score || '' }}",
+            "action": "video_failure",
+            "notes": "={{ (.data?.failMsg || .status_reason || 'Video generation failed') + ' | polls: ' + (._poll_count || 0) }}"
+          },
+          "matchingColumns": [],
+          "schema": [],
+          "ignoreIfItemNotFound": false,
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "be2536d5-4847-4bf1-948f-39506cb72b30",
+      "name": "Log Video Failure",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        2432,
+        224
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CRED_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1NUrA1tG2n_pcm0jiEIY1tUw7ms3nTufhKrbtGXaZsBg",
+          "mode": "list",
+          "cachedResultName": "Islamic Shorts",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1NUrA1tG2n_pcm0jiEIY1tUw7ms3nTufhKrbtGXaZsBg/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 225532818,
+          "mode": "list",
+          "cachedResultName": "logs",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1NUrA1tG2n_pcm0jiEIY1tUw7ms3nTufhKrbtGXaZsBg/edit#gid=225532818"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "job_id": "={{ $('Parse Context').first().json._task_id }}",
+            "action": "kie_failed",
+            "notes": "={{ 'Failed: ' + ($json.status_reason || 'unknown') + ' | context: ' + ($input.first().json.notes || '') }}"
+          },
+          "matchingColumns": [
+            "job_id"
+          ]
+        },
+        "options": {}
+      },
+      "id": "2ed203ef-472b-47f0-bb94-196c9530ba67",
+      "name": "Update Pending Failed",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        2640,
+        224
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CRED_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Schedule — Every 10 Min": {
+      "main": [
+        [
+          {
+            "node": "Get Pending Videos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Pending Videos": {
+      "main": [
+        [
+          {
+            "node": "Filter Pending",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Pending": {
+      "main": [
+        [
+          {
+            "node": "Parse Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Context": {
+      "main": [
+        [
+          {
+            "node": "Smart Classifier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Smart Classifier": {
+      "main": [
+        [
+          {
+            "node": "Parse Gemini Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Gemini Output": {
+      "main": [
+        [
+          {
+            "node": "KIE — Poll Wan Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "KIE — Poll Wan Status": {
+      "main": [
+        [
+          {
+            "node": "Check Status + Timeout",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Status + Timeout": {
+      "main": [
+        [
+          {
+            "node": "Video Ready? (IF)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Video Ready? (IF)": {
+      "main": [
+        [
+          {
+            "node": "Success or Failed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Success or Failed?": {
+      "main": [
+        [
+          {
+            "node": "Extract Video URL",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Video Failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Video URL": {
+      "main": [
+        [
+          {
+            "node": "Download Video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Video": {
+      "main": [
+        [
+          {
+            "node": "Google Drive Upload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Drive Upload": {
+      "main": [
+        [
+          {
+            "node": "Share file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Share file": {
+      "main": [
+        [
+          {
+            "node": "Append or update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append or update row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Pre-Publish Builder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pre-Publish Builder": {
+      "main": [
+        [
+          {
+            "node": "YouTube Upload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "YouTube Upload": {
+      "main": [
+        [
+          {
+            "node": "Mark Completed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark Completed": {
+      "main": [
+        [
+          {
+            "node": "Log Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Success": {
+      "main": [
+        [
+          {
+            "node": "Update Pending Done",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Pending Done": {
+      "main": [
+        [
+          {
+            "node": "Get Ideas (ideas sheet)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Ideas (ideas sheet)": {
+      "main": [
+        [
+          {
+            "node": "Build Rolling Idea Bank Brief",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Rolling Idea Bank Brief": {
+      "main": [
+        [
+          {
+            "node": "Auto Idea Generator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Auto Idea Generator": {
+      "main": [
+        [
+          {
+            "node": "Parse New Ideas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse New Ideas": {
+      "main": [
+        [
+          {
+            "node": "Append New Ideas to Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Video Failure": {
+      "main": [
+        [
+          {
+            "node": "Update Pending Failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model (Ideas)": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Auto Idea Generator",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "staticData": {
+    "node:Schedule — Every 10 Min": {
+      "recurrenceRules": []
+    }
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "8e8f6550-8715-470b-956a-0ac6146af3e2",
+  "activeVersionId": "8e8f6550-8715-470b-956a-0ac6146af3e2",
+  "versionCounter": 43,
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2026-10-04T13:52:40.065Z",
+      "createdAt": "2026-10-04T13:52:40.065Z",
+      "role": "workflow:owner",
+      "workflowId": "3vutRqQotisSlwZM",
+      "projectId": "mOWxFF5S2QruNCCv",
+      "project": {
+        "updatedAt": "2026-03-11T22:45:30.329Z",
+        "createdAt": "2026-03-11T22:42:19.225Z",
+        "id": "mOWxFF5S2QruNCCv",
+        "name": "Mohammed Almakhlafi <almakhlafimohammed7@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "9bc9f432-10e2-4c09-8243-a0911882a370"
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": {
+    "updatedAt": "2026-10-04T16:10:50.934Z",
+    "createdAt": "2026-10-04T16:10:50.934Z",
+    "versionId": "8e8f6550-8715-470b-956a-0ac6146af3e2",
+    "workflowId": "3vutRqQotisSlwZM",
+    "nodes": [
+      {
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "field": "minutes",
+                "minutesInterval": 10
+              }
+            ]
+          }
+        },
+        "id": "f9399777-2bd0-4aaf-bf6f-93026f401f24",
+        "name": "Schedule — Every 10 Min",
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1.1,
+        "position": [
+          0,
+          0
+        ]
+      },
+      {
+        "parameters": {
+          "documentId": {
+            "__rl": true,
+            "value": "1NUrA1tG2n_pcm0jiEIY1tUw7ms3nTufhKrbtGXaZsBg",
+            "mode": "list",
+            "cachedResultName": "Islamic Shorts",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1NUrA1tG2n_pcm0jiEIY1tUw7ms3nTufhKrbtGXaZsBg/edit?usp=drivesdk"
+          },
+          "sheetName": {
+            "__rl": true,
+            "value": 225532818,
+            "mode": "list",
+            "cachedResultName": "logs",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1NUrA1tG2n_pcm0jiEIY1tUw7ms3nTufhKrbtGXaZsBg/edit#gid=225532818"
+          },
+          "options": {}
+        },
+        "id": "49bdf1af-3f48-4d23-a64c-ace9d76e8ff5",
+        "name": "Get Pending Videos",
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.5,
+        "position": [
+          224,
+          0
+        ],
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "GOOGLE_SHEETS_CRED_ID",
+            "name": "Google Sheets account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "// Filter: return only first pending_kie row\nconst rows = $input.all().map(i => i.json);\nconst pending = rows.filter(r => r.action === 'pending_kie');\nif (pending.length === 0) return [];\n// Process one at a time (checker runs every 10 min, handles 1 per cycle)\nreturn [{json: pending[0]}];\n"
+        },
+        "id": "35b06891-6ee2-437d-8df5-3fc92023eabf",
+        "name": "Filter Pending",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          448,
+          0
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "// Parse stored context from logs sheet (action=pending_kie)\nconst row = $input.first().json;\n// Context JSON is stored in notes column\nlet ctx = {};\ntry { ctx = JSON.parse(row.notes || '{}'); } catch(e) {}\nreturn [{json: {\n  ...ctx,\n  _task_id: row.job_id,          // KIE task_id stored in job_id column\n  _row_created_at: row.timestamp, // creation time stored in timestamp\n  _pending_row: row\n}}];\n"
+        },
+        "id": "fc999474-76ac-48dd-8f06-400f3e0f3dda",
+        "name": "Parse Context",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          880,
+          0
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "// Shim: provides Smart Classifier interface from stored context\nconst d = $('Parse Context').first().json;\nreturn [{json: {\n  job_id: d.job_id || '',\n  idea_id: d.idea_id || '',\n  category: d.category || '',\n  publish_slot: d.publish_slot || '',\n  yt_category_id: d.yt_category_id || '22',\n  category_label: d.category_label || '',\n  final_topic: d.final_topic || '',\n  hook_style: d.hook_style || '',\n  kling_prompt_hint: d.kling_prompt_hint || ''\n}}];\n"
+        },
+        "id": "acca87e6-85ec-4bdc-bc6c-03cb237b41ef",
+        "name": "Smart Classifier",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1104,
+          0
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "// Shim: provides Parse Gemini Output interface from stored context\nconst d = $('Parse Context').first().json;\nreturn [{json: {\n  quality_score: d.quality_score || 0,\n  youtube_title: d.youtube_title || '',\n  youtube_description: d.youtube_description || '',\n  youtube_tags: d.youtube_tags || [],\n  voiceover_text: d.voiceover_text || '',\n  voiceover_arabic: d.voiceover_arabic || d.voiceover_text || '',\n  hashtags: d.hashtags || [],\n  kling_prompt: d.kling_prompt || d.wan_prompt_hint || '',\n  wan_prompt_hint: d.wan_prompt_hint || d.kling_prompt || '',\n  final_topic: d.final_topic || '',\n  category: d.category || '',\n  category_label: d.category_label || '',\n  job_id: d.job_id || '',\n  yt_category_id: d.yt_category_id || '22'\n}}];\n"
+        },
+        "id": "e3c2f8a5-c8b8-470b-a09d-2fa6b40f538f",
+        "name": "Parse Gemini Output",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1328,
+          0
+        ]
+      },
+      {
+        "parameters": {
+          "url": "=https://api.kie.ai/api/v1/jobs/recordInfo?taskId={{ $('Parse Context').first().json._task_id }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "Bearer KIE_BEARER_TOKEN"
+              },
+              {
+                "name": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "options": {
+            "response": {
+              "response": {
+                "neverError": true,
+                "responseFormat": "json"
+              }
+            },
+            "timeout": 30000
+          }
+        },
+        "id": "f873d67f-25b0-4e11-bb46-664fcca89395",
+        "name": "KIE — Poll Wan Status",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1552,
+          0
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "// KIE Status Check — Checker Workflow\n// Called once per 10-min cycle, routes to success/failure/still-pending\nconst input = $input.first().json;\nconst ctx = $('Parse Context').first().json;\n\nconst createdAt = new Date(ctx._row_created_at || new Date());\nconst ageMinutes = (Date.now() - createdAt) / 60000;\nconst TIMEOUT_MINUTES = 40;\n\nconst data = input.data || {};\nconst state = data.successFlag ?? data.state ?? data.status ?? 'pending';\n\nconst isSuccess =\n  state === 1 || state === '1' ||\n  String(state).toLowerCase() === 'success' ||\n  String(state).toLowerCase() === 'succeed' ||\n  String(state).toLowerCase() === 'completed';\n\nconst isFailed =\n  state === 2 || state === 3 || state === '2' || state === '3' ||\n  String(state).toLowerCase() === 'failed' ||\n  String(state).toLowerCase() === 'fail' ||\n  String(state).toLowerCase() === 'error' ||\n  String(state).toLowerCase() === 'timeout';\n\nconst isTimeout = ageMinutes > TIMEOUT_MINUTES;\n\nconst is_success = isSuccess;\nconst is_failed = !isSuccess && (isFailed || isTimeout); // success always wins\n\nconst status_reason = is_failed\n  ? (data.failMsg || data.msg || data.fail_reason ||\n     (isTimeout ? `KIE timeout after ${Math.round(ageMinutes)} min` : 'KIE generation failed'))\n  : '';\n\nreturn [{json: {\n  ...input,\n  is_success,\n  is_failed,\n  is_generating: !is_success && !is_failed,\n  status_reason,\n  _poll_count: 1,\n  elapsed_seconds: Math.round(ageMinutes * 60),\n  data,\n  job_id: ctx.job_id || '',\n  category: ctx.category || '',\n  youtube_title: ctx.youtube_title || ctx.final_topic || '',\n  topic: ctx.final_topic || '',\n  quality_score: ctx.quality_score || 0\n}}];\n"
+        },
+        "id": "b9e8c5d9-00df-4027-ba97-0f59ee8711be",
+        "name": "Check Status + Timeout",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1760,
+          0
+        ]
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 3
+            },
+            "conditions": [
+              {
+                "id": "8e8f18d4-f0ea-4598-ae4a-adadfb765560",
+                "leftValue": "={{ $json.is_success }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              },
+              {
+                "id": "4ec3af4f-fc01-4423-9ebb-24d422b7dba9",
+                "leftValue": "={{ $json.is_failed }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "or"
+          },
+          "options": {}
+        },
+        "id": "1ea18d80-f616-40b6-aa80-c3230bb439bc",
+        "name": "Video Ready? (IF)",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          1984,
+          0
+        ]
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 3
+            },
+            "conditions": [
+              {
+                "id": "46966cdd-cee4-40ed-98eb-ec095b112687",
+                "leftValue": "={{ $json.is_success }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "id": "cdd4772c-c9cd-49e0-a6bb-9272163430da",
+        "name": "Success or Failed?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          2208,
+          0
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "// ============================================================\n// NODE: Extract Video URL — Wan 2.2 Speech-to-Video\n// يستخرج رابط الفيديو النهائي من ناتج KIE\n// ============================================================\n\nconst raw = $input.first().json;\n\n// 1. فحص الفشل أولاً\nif (raw.is_failed) {\n  throw new Error(`Video generation failed after ${raw.elapsed_seconds}s. Reason: ${raw.status_reason}`);\n}\n\nconst data = raw.data || raw;\n\n// 2. محاولة قراءة resultJson (قد يكون string أو object)\nlet resultJson = data.resultJson || data;\nif (typeof resultJson === 'string') {\n  try { resultJson = JSON.parse(resultJson); } catch (e) {}\n}\n\n// 3. البحث عن رابط الفيديو في كل المواقع الممكنة\nconst candidates = [\n  // المسار الأكثر شيوعاً لـ KIE\n    resultJson?.data?.resultUrls,\n  resultJson?.resultUrls,\n  data?.resultUrls,\n  resultJson?.data?.result_urls,\n  resultJson?.result_urls,\n  data?.result_urls,\n  // مسارات بديلة\n  [resultJson?.data?.video_url],\n  [resultJson?.video_url],\n  [data?.videoUrl],\n  [data?.video_url],\n  [data?.url],\n  // مسار Wan الخاص\n  resultJson?.data?.output?.video_url,\n  resultJson?.output?.video_url,\n  // مسار array مسطح\n  resultJson?.data?.urls,\n  resultJson?.urls\n];\n\nlet videoUrl = null;\n\nfor (const candidate of candidates) {\n  if (!candidate) continue;\n  \n  // إذا كان array\n  if (Array.isArray(candidate) && candidate.length > 0) {\n    const url = String(candidate[0]).trim();\n    if (url.startsWith('http')) {\n      videoUrl = url;\n      break;\n    }\n  }\n  \n  // إذا كان string مباشر\n  if (typeof candidate === 'string' && candidate.startsWith('http')) {\n    videoUrl = candidate.trim();\n    break;\n  }\n}\n\n// 4. إذا لم نجد رابطاً، نرمي خطأ مع تفاصيل للاستكشاف\nif (!videoUrl) {\n  const debugInfo = JSON.stringify({\n    data_keys: Object.keys(data),\n    resultJson_keys: typeof resultJson === 'object' ? Object.keys(resultJson) : 'not_object',\n    successFlag: data.successFlag,\n    state: data.state\n  }).slice(0, 800);\n  \n  throw new Error(`No video URL found in KIE response. Debug: ${debugInfo}`);\n}\n\n// 5. جمع البيانات من العقد السابقة\nconst parseData = $('Parse Gemini Output').first().json;\nconst classData = $('Smart Classifier').first().json;\nconst taskId = $('Parse Context').first().json._task_id || '';\n\nreturn [{\n  json: {\n    ...parseData,\n    ...classData,\n    video_url: videoUrl,\n    kie_task_id: taskId,\n    video_ready_at: new Date().toISOString(),\n    render_model: 'wan-2-2-speech-to-video',\n    total_generation_seconds: raw.elapsed_seconds || 0,\n    poll_count: raw._poll_count || 0\n  }\n}];"
+        },
+        "id": "9a75f876-9588-4695-bb7a-dc1bda9e1f30",
+        "name": "Extract Video URL",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          2432,
+          0
+        ]
+      },
+      {
+        "parameters": {
+          "url": "={{ $json.video_url }}",
+          "options": {
+            "response": {
+              "response": {
+                "responseFormat": "file",
+                "outputPropertyName": "video_data"
+              }
+            },
+            "timeout": 150000
+          }
+        },
+        "id": "ec411781-76de-494f-9b27-1154567388b4",
+        "name": "Download Video",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          2640,
+          0
+        ]
+      },
+      {
+        "parameters": {
+          "inputDataFieldName": "video_data",
+          "name": "=job_{{ $json.job_id }}.mp4",
+          "driveId": {
+            "__rl": true,
+            "mode": "list",
+            "value": "My Drive"
+          },
+          "folderId": {
+            "__rl": true,
+            "mode": "list",
+            "value": "root",
+            "cachedResultName": "/ (Root folder)"
+          },
+          "options": {}
+        },
+        "id": "d1f17053-3b03-4c7f-98c7-ec7ab7562e70",
+        "name": "Google Drive Upload",
+        "type": "n8n-nodes-base.googleDrive",
+        "typeVersion": 3,
+        "position": [
+          2864,
+          0
+        ],
+        "credentials": {
+          "googleDriveOAuth2Api": {
+            "id": "GOOGLE_DRIVE_CRED_ID",
+            "name": "Google Drive account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "share",
+          "fileId": {
+            "__rl": true,
+            "value": "={{ $json.id }}",
+            "mode": "id"
+          },
+          "permissionsUi": {
+            "permissionsValues": {
+              "role": "reader",
+              "type": "anyone"
+            }
+          },
+          "options": {}
+        },
+        "id": "f3cc37ad-b88b-4036-bc03-10847e9d0110",
+        "name": "Share file",
+        "type": "n8n-nodes-base.googleDrive",
+        "typeVersion": 3,
+        "position": [
+          3088,
+          0
+        ],
+        "credentials": {
+          "googleDriveOAuth2Api": {
+            "id": "GOOGLE_DRIVE_CRED_ID",
+            "name": "Google Drive account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "appendOrUpdate",
+          "documentId": {
+            "__rl": true,
+            "value": "1NUrA1tG2n_pcm0jiEIY1tUw7ms3nTufhKrbtGXaZsBg",
+            "mode": "list",
+            "cachedResultName": "Islamic Shorts",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1NUrA1tG2n_pcm0jiEIY1tUw7ms3nTufhKrbtGXaZsBg/edit?usp=drivesdk"
+          },
+          "sheetName": {
+            "__rl": true,
+            "value": 1250425104,
+            "mode": "list",
+            "cachedResultName": "ideas",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1NUrA1tG2n_pcm0jiEIY1tUw7ms3nTufhKrbtGXaZsBg/edit#gid=1250425104"
+          },
+          "columns": {
+            "mappingMode": "defineBelow",
+            "value": {
+              "id": "={{ $('Smart Classifier').first().json.idea_id }}",
+              "google_drive_url": "=https://drive.google.com/file/d/{{ $('Google Drive Upload').first().json.id }}/view"
+            },
+            "matchingColumns": [
+              "id"
+            ],
+            "schema": [
+              {
+                "id": "id",
+                "displayName": "id",
+                "required": false,
+                "defaultMatch": true,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true,
+                "removed": false
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "32333aab-74e2-46b9-84f0-e0ad421e6d59",
+        "name": "Append or update row in sheet",
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.5,
+        "position": [
+          3312,
+          0
+        ],
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "GOOGLE_SHEETS_CRED_ID",
+            "name": "Google Sheets account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "// ============================================================\n// NODE: Pre-Publish Builder — Wan Speech-to-Video\n// ============================================================\n\nconst parseData = $('Parse Gemini Output').first().json;\nconst classData = $('Smart Classifier').first().json;\nconst videoBinary = $('Download Video').first().binary;\n\nif (!videoBinary?.video_data) {\n  throw new Error('Final video binary not found. Expected: Download Video → video_data');\n}\n\nconst data = {\n  ...parseData,\n  yt_category_id: parseData.yt_category_id || classData.yt_category_id || '22',\n  category_label: parseData.category_label || classData.category_label || '',\n  job_id: parseData.job_id || classData.job_id || '',\n  final_topic: parseData.final_topic || classData.final_topic || '',\n  quality_score: parseData.quality_score || 0,\n};\n\n// Title\nlet title = String(\n  parseData.youtube_title ||\n  data.final_topic ||\n  'حين يصمت القلب تتكلم الروح'\n).trim();\n\ntitle = title\n  .replace(/[\\u{1F000}-\\u{1FFFF}\\u{2600}-\\u{27FF}]/gu, '')\n  .trim();\n\nif ([...title].length > 80) {\n  title = [...title].slice(0, 77).join('').trim() + '...';\n}\n\n// Hashtags\nlet finalTags = Array.isArray(parseData.hashtags)\n  ? parseData.hashtags\n  : String(parseData.hashtags || '').split(/\\s+/);\n\nfinalTags = finalTags\n  .map(tag => String(tag)\n    .trim()\n    .replace(/[\\u{1F000}-\\u{1FFFF}\\u{2600}-\\u{27FF}]/gu, '')\n    .trim()\n  )\n  .filter(Boolean)\n  .map(tag => tag.startsWith('#') ? tag : '#' + tag)\n  .filter(tag => /^#[\\w\\u0600-\\u06FF]+$/.test(tag));\n\nfinalTags = [...new Set(finalTags)].slice(0, 12);\n\nconst cleanTags = finalTags.map(tag => tag.replace('#', ''));\nconst hashBlock = finalTags.join(' ');\n\n// Description\nlet baseDesc = String(parseData.youtube_description || '').trim();\n\nbaseDesc = baseDesc\n  .replace(/[\\u{1F000}-\\u{1FFFF}\\u{2600}-\\u{27FF}]/gu, '')\n  .trim();\n\nconst finalDescription = [\n  baseDesc,\n  '',\n  hashBlock,\n  '',\n  'اشترك للمزيد من الفيديوهات الإسلامية الفكرية والتأملية.',\n  'محتوى مرئي بالذكاء الاصطناعي لأغراض التدبر والتفكر.'\n].join('\\n');\n\n// Scheduling\nconst TIMEZONE_OFFSET_HOURS = 3;\n\nconst now = new Date();\nconst localNow = new Date(\n  now.getTime() + TIMEZONE_OFFSET_HOURS * 60 * 60 * 1000\n);\n\nconst publishAt = new Date(localNow);\npublishAt.setUTCHours(21, 0, 0, 0);\n\nif (publishAt <= localNow) {\n  publishAt.setUTCDate(publishAt.getUTCDate() + 1);\n}\n\nconst publishAtUtc = new Date(\n  publishAt.getTime() - TIMEZONE_OFFSET_HOURS * 60 * 60 * 1000\n);\n\n// Voiceover statistics\nconst voiceover = String(parseData.voiceover_arabic || '');\nconst voiceWords = voiceover.split(/\\s+/).filter(Boolean).length;\n\nreturn [{\n  json: {\n    ...data,\n    final_title: title,\n    final_description: finalDescription,\n    final_tags: finalTags,\n    clean_tags: cleanTags,\n    scheduled_publish_at: publishAtUtc.toISOString(),\n\n    qa_summary: {\n      title_chars: [...title].length,\n      hashtags_count: finalTags.length,\n      quality_score: parseData.quality_score,\n      category: data.category_label || parseData.category,\n      render_model: 'wan/2-2-a14b-speech-to-video-turbo',\n      production_mode: 'speech_to_video',\n      audio_source: 'elevenlabs/text-to-dialogue-v3',\n      voiceover_words: voiceWords,\n      voiceover_ok: voiceWords >= 28 && voiceWords <= 48,\n      video_synced: true\n    }\n  },\n\n  binary: videoBinary\n}];"
+        },
+        "id": "20f5e674-5a6f-418d-b1b1-8ba723aa304d",
+        "name": "Pre-Publish Builder",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          3520,
+          0
+        ]
+      },
+      {
+        "parameters": {
+          "resource": "video",
+          "operation": "upload",
+          "title": "={{ $json.final_title }}",
+          "regionCode": "IN",
+          "categoryId": "={{ $json.yt_category_id }}",
+          "binaryProperty": "video_data",
+          "options": {
+            "description": "={{ $json.final_description }}",
+            "notifySubscribers": true,
+            "privacyStatus": "private",
+            "publicStatsViewable": true,
+            "selfDeclaredMadeForKids": false,
+            "tags": "={{ $json.clean_tags.join(',') }}"
+          }
+        },
+        "id": "19121fd8-24de-4329-bbe7-5480da545ea1",
+        "name": "YouTube Upload",
+        "type": "n8n-nodes-base.youTube",
+        "typeVersion": 1,
+        "position": [
+          3744,
+          0
+        ],
+        "credentials": {
+          "youTubeOAuth2Api": {
+            "id": "05Gk7WAFmZEbchQz",
+            "name": "YouTube account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "update",
+          "documentId": {
+            "__rl": true,
+            "value": "1NUrA1tG2n_pcm0jiEIY1tUw7ms3nTufhKrbtGXaZsBg",
+            "mode": "list",
+            "cachedResultName": "Islamic Shorts",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1NUrA1tG2n_pcm0jiEIY1tUw7ms3nTufhKrbtGXaZsBg/edit?usp=drivesdk"
+          },
+          "sheetName": {
+            "__rl": true,
+            "value": 1250425104,
+            "mode": "list",
+            "cachedResultName": "ideas",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1NUrA1tG2n_pcm0jiEIY1tUw7ms3nTufhKrbtGXaZsBg/edit#gid=1250425104"
+          },
+          "columns": {
+            "mappingMode": "defineBelow",
+            "value": {
+              "id": "={{ $('Smart Classifier').first().json.idea_id }}",
+              "production_status": "completed",
+              "youtube_url": "=https://youtube.com/watch?v={{ $json.id }}",
+              "quality_score": "={{ $('Parse Gemini Output').first().json.quality_score }}",
+              "job_id": "={{ $('Smart Classifier').first().json.job_id }}",
+              "youtube_title": "={{ $('Parse Gemini Output').first().json.youtube_title }}",
+              "scheduled_date": "={{ $now.toFormat('yyyy-MM-dd') }}",
+              "scheduled_time": "={{ $('Smart Classifier').first().json.best_publish_time }}",
+              "notes": "=✅ Published {{ $now.toISO() }}",
+              "category": "={{ $('Parse Gemini Output').first().json.category }}",
+              "hashtags": "={{ $('Parse Gemini Output').first().json.hashtags.join(' ') }}"
+            },
+            "matchingColumns": [
+              "id"
+            ],
+            "schema": [
+              {
+                "id": "id",
+                "displayName": "id",
+                "required": false,
+                "defaultMatch": true,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "idea",
+                "displayName": "idea",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true,
+                "removed": false
+              },
+              {
+                "id": "category",
+                "displayName": "category",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true,
+                "removed": false
+              },
+              {
+                "id": "production_status",
+                "displayName": "production_status",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "priority",
+                "displayName": "priority",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true,
+                "removed": false
+              },
+              {
+                "id": "scheduled_date",
+                "displayName": "scheduled_date",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "scheduled_time",
+                "displayName": "scheduled_time",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "kling_prompt",
+                "displayName": "kling_prompt",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true,
+                "removed": false
+              },
+              {
+                "id": "youtube_title",
+                "displayName": "youtube_title",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "hashtags",
+                "displayName": "hashtags",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true,
+                "removed": false
+              },
+              {
+                "id": "quality_score",
+                "displayName": "quality_score",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "youtube_url",
+                "displayName": "youtube_url",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "job_id",
+                "displayName": "job_id",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "google_drive_url",
+                "displayName": "google_drive_url",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true,
+                "removed": false
+              },
+              {
+                "id": "notes",
+                "displayName": "notes",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "row_number",
+                "displayName": "row_number",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "number",
+                "canBeUsedToMatch": true,
+                "readOnly": true,
+                "removed": true
+              }
+            ],
+            "attemptToConvertTypes": false,
+            "convertFieldsToString": false
+          },
+          "options": {}
+        },
+        "id": "2e972fc2-0f3a-44f9-85e5-7c1d26709df5",
+        "name": "Mark Completed",
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.5,
+        "position": [
+          3968,
+          0
+        ],
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "GOOGLE_SHEETS_CRED_ID",
+            "name": "Google Sheets account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "append",
+          "documentId": {
+            "__rl": true,
+            "value": "1NUrA1tG2n_pcm0jiEIY1tUw7ms3nTufhKrbtGXaZsBg",
+            "mode": "list",
+            "cachedResultName": "Islamic Shorts",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1NUrA1tG2n_pcm0jiEIY1tUw7ms3nTufhKrbtGXaZsBg/edit?usp=drivesdk"
+          },
+          "sheetName": {
+            "__rl": true,
+            "value": 225532818,
+            "mode": "list",
+            "cachedResultName": "logs",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1NUrA1tG2n_pcm0jiEIY1tUw7ms3nTufhKrbtGXaZsBg/edit#gid=225532818"
+          },
+          "columns": {
+            "mappingMode": "defineBelow",
+            "value": {
+              "timestamp": "={{ $now.toISO() }}",
+              "job_id": "={{ $('Smart Classifier').first().json.job_id }}",
+              "category": "={{ $('Smart Classifier').first().json.category }}",
+              "topic": "={{ $('Pre-Publish Builder').first().json.final_title }}",
+              "quality_score": "={{ $('Parse Gemini Output').first().json.quality_score }}",
+              "action": "published",
+              "youtube_url": "=https://youtube.com/watch?v={{ $('YouTube Upload').first().json.id }}",
+              "notes": "=Auto-published successfully. Slot: {{ $('Smart Classifier').first().json.publish_slot }}"
+            },
+            "matchingColumns": [],
+            "schema": [
+              {
+                "id": "timestamp",
+                "displayName": "timestamp",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "job_id",
+                "displayName": "job_id",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "category",
+                "displayName": "category",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "topic",
+                "displayName": "topic",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "quality_score",
+                "displayName": "quality_score",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "action",
+                "displayName": "action",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "youtube_url",
+                "displayName": "youtube_url",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "notes",
+                "displayName": "notes",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              }
+            ],
+            "attemptToConvertTypes": false,
+            "convertFieldsToString": true
+          },
+          "options": {}
+        },
+        "id": "4b9cd0cf-d250-4701-a92f-f7f5ccb8d345",
+        "name": "Log Success",
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.5,
+        "position": [
+          4192,
+          0
+        ],
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "GOOGLE_SHEETS_CRED_ID",
+            "name": "Google Sheets account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "update",
+          "documentId": {
+            "__rl": true,
+            "value": "1NUrA1tG2n_pcm0jiEIY1tUw7ms3nTufhKrbtGXaZsBg",
+            "mode": "list",
+            "cachedResultName": "Islamic Shorts",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1NUrA1tG2n_pcm0jiEIY1tUw7ms3nTufhKrbtGXaZsBg/edit?usp=drivesdk"
+          },
+          "sheetName": {
+            "__rl": true,
+            "value": 225532818,
+            "mode": "list",
+            "cachedResultName": "logs",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1NUrA1tG2n_pcm0jiEIY1tUw7ms3nTufhKrbtGXaZsBg/edit#gid=225532818"
+          },
+          "columns": {
+            "mappingMode": "defineBelow",
+            "value": {
+              "job_id": "={{ $('Parse Context').first().json._task_id }}",
+              "action": "kie_done",
+              "youtube_url": "=https://youtube.com/watch?v={{ $('YouTube Upload').first().json.id }}",
+              "row_number": 0
+            },
+            "matchingColumns": [
+              "job_id"
+            ],
+            "schema": [
+              {
+                "id": "timestamp",
+                "displayName": "timestamp",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true,
+                "removed": false
+              },
+              {
+                "id": "job_id",
+                "displayName": "job_id",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "category",
+                "displayName": "category",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true,
+                "removed": false
+              },
+              {
+                "id": "topic",
+                "displayName": "topic",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true,
+                "removed": false
+              },
+              {
+                "id": "quality_score",
+                "displayName": "quality_score",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true,
+                "removed": false
+              },
+              {
+                "id": "action",
+                "displayName": "action",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "youtube_url",
+                "displayName": "youtube_url",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "notes",
+                "displayName": "notes",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true,
+                "removed": false
+              },
+              {
+                "id": "row_number",
+                "displayName": "row_number",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "number",
+                "canBeUsedToMatch": true,
+                "readOnly": true,
+                "removed": false
+              }
+            ],
+            "attemptToConvertTypes": false,
+            "convertFieldsToString": false
+          },
+          "options": {}
+        },
+        "id": "b9d81ad5-f190-4f17-beae-f615de46e9f5",
+        "name": "Update Pending Done",
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.5,
+        "position": [
+          4400,
+          0
+        ],
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "GOOGLE_SHEETS_CRED_ID",
+            "name": "Google Sheets account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "documentId": {
+            "__rl": true,
+            "value": "1NUrA1tG2n_pcm0jiEIY1tUw7ms3nTufhKrbtGXaZsBg",
+            "mode": "list",
+            "cachedResultName": "Islamic Shorts",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1NUrA1tG2n_pcm0jiEIY1tUw7ms3nTufhKrbtGXaZsBg/edit?usp=drivesdk"
+          },
+          "sheetName": {
+            "__rl": true,
+            "value": 1250425104,
+            "mode": "list",
+            "cachedResultName": "ideas",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1NUrA1tG2n_pcm0jiEIY1tUw7ms3nTufhKrbtGXaZsBg/edit#gid=1250425104"
+          },
+          "options": {
+            "outputFormatting": {
+              "values": {
+                "general": "UNFORMATTED_VALUE",
+                "date": "FORMATTED_STRING"
+              }
+            }
+          }
+        },
+        "id": "cf0515cb-f52b-4a8d-acca-bad3ad29872f",
+        "name": "Get Ideas (ideas sheet)",
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.5,
+        "position": [
+          4624,
+          0
+        ],
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "GOOGLE_SHEETS_CRED_ID",
+            "name": "Google Sheets account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "// ============================================================\n// Build Rolling Idea Bank Brief\n// نظام اقتصادي: يولد 3 أفكار فقط عند فراغ أفكار الأيام القادمة\n// ============================================================\n\nconst classifier = $('Smart Classifier').first().json;\nconst sheetRows = $('Get Ideas (ideas sheet)').all().map(item => item.json || {});\n\n// دورة التصنيفات الأساسية\nconst CATEGORIES = [\n  {\n    id: 'tamal_qurani',\n    label: 'تأمل قرآني',\n    angles: [\n      'آية مألوفة يتغير معناها حين يتغير سؤال القلب',\n      'الفرق بين تلاوة الآية وسماعها بالقلب',\n      'كيف يوقظ القرآن سؤالًا نائمًا في النفس',\n      'المعنى الذي نراه حين نبطئ أمام الآية',\n      'القرآن بوصفه مرآة للحالة الداخلية',\n      'السكوت الذي تفتحه آية واحدة',\n      'لماذا تأتي بعض الآيات في وقتها تمامًا',\n      'التدبر حين يتحول النص إلى صحبة'\n    ]\n  },\n  {\n    id: 'tamal_kawni',\n    label: 'تأمل كوني',\n    angles: [\n      'بطء الفجر وكيف يعلّم القلب التدرج',\n      'اتساع السماء أمام ضيق الإنسان',\n      'المطر بوصفه درسًا في الانتظار',\n      'تعاقب الليل والنهار ومعنى البداية الجديدة',\n      'هدوء الأشياء العظيمة في الطبيعة',\n      'النجوم ومعنى الثبات وسط البعد',\n      'الريح وما لا نراه لكنه يغيرنا',\n      'تبدل الفصول ومعنى عدم دوام الحال'\n    ]\n  },\n  {\n    id: 'muraqabat_nafs',\n    label: 'مراقبة النفس',\n    angles: [\n      'الصدق مع النفس حين لا يرانا أحد',\n      'الفرق بين الندم وجلد الذات',\n      'التبرير الداخلي الذي يخفي الحقيقة',\n      'مراقبة النية قبل مراقبة النتائج',\n      'العيوب التي نرى أثرها ولا نرى أصلها',\n      'الصمت قبل الحكم على الآخرين',\n      'العودة إلى النفس بعد الزلل',\n      'كيف تكشف الخلوة حقيقة القلب'\n    ]\n  },\n  {\n    id: 'ilm_wa_marifa',\n    label: 'علم ومعرفة',\n    angles: [\n      'المعرفة التي تجعل الإنسان أكثر تواضعًا',\n      'الفرق بين كثرة المعلومات وعمق الفهم',\n      'العلم الذي يهدئ العقل بدل أن يثقله',\n      'السؤال الصادق بوصفه بداية معرفة',\n      'التأمل قبل الحكم السريع',\n      'القراءة التي تغيّر طريقة النظر',\n      'المعنى الذي لا تمنحه الإجابات الجاهزة',\n      'كيف يتحول العلم إلى تهذيب للنفس'\n    ]\n  },\n  {\n    id: 'rihlah_ruhiya',\n    label: 'رحلة روحية',\n    angles: [\n      'السفر الداخلي الذي يبدأ من الصمت',\n      'العودة إلى الله بعد طول التشتت',\n      'الطريق الذي يتغير حين تتغير النية',\n      'الغربة التي تكشف ما يحتاجه القلب',\n      'الخطوة الصغيرة التي تغير اتجاه الروح',\n      'الرحلة بين ما نريده وما نحتاجه',\n      'البحث عن المعنى وسط الزحام',\n      'كيف يصبح التأمل طريقًا لا لحظة'\n    ]\n  },\n  {\n    id: 'rida_wa_sakina',\n    label: 'رضا وسكينة',\n    angles: [\n      'الرضا حين تتأخر الإجابة',\n      'السكينة وسط ما لا نستطيع تفسيره',\n      'قبول ما لا نملك تغييره',\n      'الفرق بين الاستسلام والرضا',\n      'الهدوء بعد الفقد أو الخيبة',\n      'كيف يتخفف القلب من مقاومة الواقع',\n      'الطمأنينة التي لا تعتمد على الظروف',\n      'الراحة حين نتوقف عن سؤال لماذا دائمًا'\n    ]\n  },\n  {\n    id: 'dhikr_wa_tasbih',\n    label: 'ذكر وتسبيح',\n    angles: [\n      'الذكر حين يعجز القلب عن الشرح',\n      'التسبيح بوصفه إعادة ترتيب للداخل',\n      'كلمة ذكر صغيرة في لحظة ثقيلة',\n      'الذكر بين ضجيج العالم وصمت القلب',\n      'كيف يعيد الذكر الإنسان إلى نفسه',\n      'الحضور القلبي بدل تكرار الكلمات فقط',\n      'الذكر حين يختلط الخوف بالرجاء',\n      'التسبيح بوصفه تنفّسًا روحيًا'\n    ]\n  },\n  {\n    id: 'sabr_wa_thabat',\n    label: 'صبر وثبات',\n    angles: [\n      'الصبر الذي لا يحتاج إلى ادعاء القوة',\n      'الثبات حين يثقل الطريق',\n      'الفرق بين الصبر وتأجيل الألم',\n      'الاستمرار رغم غياب الإجابات',\n      'كيف لا نغادر أنفسنا في التعب',\n      'الصبر بوصفه حضورًا لا انتظارًا فقط',\n      'القوة الهادئة بعد الانكسار',\n      'الثبات في التفاصيل الصغيرة اليومية'\n    ]\n  }\n];\n\nconst blockedStatuses = new Set([\n  'completed',\n  'in_progress',\n  'rejected',\n  'failed',\n  'skipped'\n]);\n\nfunction text(value) {\n  return String(value || '').trim();\n}\n\nfunction isReadyIdea(row) {\n  const status = text(row.production_status).toLowerCase();\n\n  return (\n    text(row.idea).length > 20 &&\n    !blockedStatuses.has(status)\n  );\n}\n\n// تحديد ترتيب فئة اليوم\nlet currentIndex = Number(classifier.category_rotation_index);\n\nif (!Number.isInteger(currentIndex) || currentIndex < 0) {\n  currentIndex = CATEGORIES.findIndex(item => item.id === classifier.category);\n}\n\nif (currentIndex < 0) currentIndex = 0;\n\n// نأخذ فئات الأيام الثلاثة القادمة فقط\nconst nextThreeCategories = [1, 2, 3].map(offset => {\n  return CATEGORIES[(currentIndex + offset) % CATEGORIES.length];\n});\n\n// الأفكار الجاهزة الموجودة فعليًا لكل فئة من الفئات القادمة\nconst futureStats = nextThreeCategories.map(category => {\n  const allCategoryIdeas = sheetRows.filter(row => {\n    return text(row.category) === category.id;\n  });\n\n  const readyIdeas = allCategoryIdeas.filter(isReadyIdea);\n\n  return {\n    id: category.id,\n    label: category.label,\n    readyCount: readyIdeas.length,\n    totalHistoryCount: allCategoryIdeas.filter(row => text(row.idea)).length,\n    angles: category.angles\n  };\n});\n\n// كم فئة قادمة لديها فكرة جاهزة؟\nconst coveredFutureCategories = futureStats.filter(item => {\n  return item.readyCount > 0;\n}).length;\n\n// سياسة التوفير:\n// لا يستدعي OpenAI إلا إذا لم توجد ولا فكرة واحدة\n// للتصنيفات الثلاثة القادمة.\nconst shouldGenerate = coveredFutureCategories === 0;\n\n// إذا لدينا مخزون ولو بسيط، لا نرسل أي Item للعقدة التالية.\n// هذا يعني أن Auto Idea Generator لن يعمل ولن يستهلك رصيدًا.\nif (!shouldGenerate) {\n  return [];\n}\n\n// تجهيز 3 فئات + 3 زوايا مختلفة\nconst categoryPlan = futureStats.map((item, index) => {\n  const angleIndex = item.totalHistoryCount % item.angles.length;\n  const selectedAngle = item.angles[angleIndex];\n\n  return {\n    order: index + 1,\n    id: item.id,\n    label: item.label,\n    required_angle: selectedAngle\n  };\n});\n\n// نرسل فقط آخر 8 أفكار من كل تصنيف لتقليل Tokens\nconst previousIdeasForPrompt = categoryPlan.map(plan => {\n  const ideas = sheetRows\n    .filter(row => text(row.category) === plan.id && text(row.idea))\n    .slice(-8)\n    .map((row, index) => {\n      return `${index + 1}. ${text(row.idea).slice(0, 350)}`;\n    });\n\n  return [\n    `CATEGORY: ${plan.id} — ${plan.label}`,\n    ideas.length ? ideas.join('\\n') : 'No previous ideas stored for this category.'\n  ].join('\\n');\n}).join('\\n\\n---\\n\\n').slice(0, 6500);\n\nconst categoryPlanText = categoryPlan.map(plan => {\n  return [\n    `${plan.order}. category: ${plan.id}`,\n    `Arabic label: ${plan.label}`,\n    `Required fresh philosophical angle: ${plan.required_angle}`\n  ].join(' | ');\n}).join('\\n');\n\nreturn [{\n  json: {\n    should_generate: true,\n    generation_mode: 'rolling_3_day_buffer',\n    generation_count: 3,\n\n    generated_at: new Date().toISOString(),\n    source_job_id: classifier.job_id,\n\n    current_category: classifier.category,\n    current_category_label: classifier.category_label,\n\n    category_plan: categoryPlan,\n    category_plan_text: categoryPlanText,\n\n    previous_ideas_text: previousIdeasForPrompt,\n\n    coverage_before_generation: {\n      next_categories: futureStats.map(item => ({\n        category: item.id,\n        ready_ideas: item.readyCount\n      })),\n      covered_future_categories: coveredFutureCategories\n    }\n  }\n}];"
+        },
+        "id": "b2121355-abe6-4aff-bb27-3d8ac3074843",
+        "name": "Build Rolling Idea Bank Brief",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          4848,
+          0
+        ]
+      },
+      {
+        "parameters": {
+          "promptType": "define",
+          "text": "=Create exactly 3 new Islamic philosophical YouTube Shorts ideas.\n\nYou must create exactly one idea for each category below.\n\nCATEGORY PLAN:\n{{ $json.category_plan_text }}\n\nPREVIOUS IDEAS:\n{{ $json.previous_ideas_text }}\n\nSTRICT REQUIREMENTS:\n\n1. Keep the category order exactly as listed in CATEGORY PLAN.\n2. Create exactly 3 JSON objects only.\n3. Each idea must use the exact category_id from the plan.\n4. Each Arabic idea must be 2 to 4 meaningful sentences.\n5. The first sentence must create calm curiosity, philosophical tension, or inner reflection.\n6. Do not repeat any idea, wording, theme, or philosophical angle from PREVIOUS IDEAS.\n7. Do not create direct religious rulings, fabricated quotes, Quran verses, or hadith.\n8. Keep the visual concept realistic, calm, cinematic, and compatible with a single speaking portrait of Nur.\n9. The English visual prompt must mention:\n   - young veiled Arab woman named Nur\n   - medium close-up\n   - visible lips\n   - calm natural facial movement\n   - soft cinematic lighting\n   - subtle camera movement\n   - vertical 9:16\n   - no text, no subtitles, no watermark, no extra people\n\nReturn ONLY this raw JSON array:\n\n[\n  {\n    \"category\": \"exact_category_id_from_plan\",\n    \"angle\": \"short Arabic description of the philosophical angle\",\n    \"idea\": \"Arabic idea in elegant Modern Standard Arabic\",\n    \"kling_prompt\": \"English visual direction prompt suitable for Wan speech-to-video\",\n    \"priority\": \"medium\"\n  }\n]\n\nReturn exactly 3 objects.\nReturn JSON only.",
+          "options": {
+            "systemMessage": "=You are a senior editorial planner for a premium Arabic Islamic YouTube Shorts channel.\n\nCreate original, dignified, emotionally engaging, and intellectually meaningful Islamic philosophical ideas.\n\nThe channel features a young veiled Arab woman named Nur in serene and cinematic settings.\n\nYou must follow these rules:\n\n- Use Modern Standard Arabic only in Arabic fields.\n- No emojis, slang, colloquial language, cheap motivation, fear tactics, or shallow preaching.\n- No CCTV, accidents, rescues, violence, crime, gore, blood, weapons, action scenes, comedy, controversy, or politics.\n- Do not fabricate Quran verses, hadith, religious quotations, or legal religious rulings.\n- Do not repeat, paraphrase, or recreate philosophical angles from the provided previous ideas.\n- Every idea must have an elegant opening that creates curiosity or emotional reflection.\n- The visual prompt must be English only.\n- The visual scene must be compatible with a single image-to-speech video featuring Nur.\n- One veiled Arab woman only, medium close-up, visible lips, calm facial movement, subtle natural camera movement.\n- No subtitles, no text overlays, no logos, no watermark, no extra people.\n\nReturn strictly valid raw JSON only.\nDo not return markdown.\nDo not write explanations outside the JSON array."
+          }
+        },
+        "id": "6bd951db-ac18-4610-ac3f-0fd0eca619f6",
+        "name": "Auto Idea Generator",
+        "type": "@n8n/n8n-nodes-langchain.agent",
+        "typeVersion": 1.7,
+        "position": [
+          4816,
+          -336
+        ]
+      },
+      {
+        "parameters": {
+          "model": {
+            "__rl": true,
+            "value": "gpt-4o",
+            "mode": "list",
+            "cachedResultName": "gpt-4o"
+          },
+          "options": {}
+        },
+        "id": "ba250fcf-dec3-4f49-93b1-5e56679883e2",
+        "name": "OpenAI Chat Model (Ideas)",
+        "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+        "typeVersion": 1.2,
+        "position": [
+          5072,
+          -208
+        ],
+        "credentials": {
+          "openAiApi": {
+            "id": "OPENAI_CRED_ID",
+            "name": "OpenAi accountalmydiaf"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "// ============================================================\n// Parse New Ideas\n// يتحقق من 3 أفكار إسلامية قبل حفظها في شيت ideas\n// ============================================================\n\nconst aiResponse = $input.first().json;\nconst brief = $('Build Rolling Idea Bank Brief').first().json;\nconst sheetRows = $('Get Ideas (ideas sheet)').all().map(item => item.json || {});\n\n// استخراج الرد من Agent\nlet raw =\n  aiResponse.output ??\n  aiResponse.text ??\n  aiResponse.message?.content ??\n  aiResponse.choices?.[0]?.message?.content ??\n  '';\n\nif (typeof raw !== 'string') {\n  raw = JSON.stringify(raw);\n}\n\nlet clean = raw\n  .replace(/^\\uFEFF/, '')\n  .replace(/```json/gi, '')\n  .replace(/```/g, '')\n  .replace(/[\\u201C\\u201D]/g, '\"')\n  .trim();\n\nlet generatedIdeas = [];\nlet parseError = '';\n\ntry {\n  const match = clean.match(/\\[[\\s\\S]*\\]/);\n\n  if (!match) {\n    throw new Error('No JSON array found in AI response');\n  }\n\n  generatedIdeas = JSON.parse(match[0]);\n\n  if (!Array.isArray(generatedIdeas)) {\n    throw new Error('Response is not an array');\n  }\n} catch (error) {\n  parseError = String(error.message || error);\n  generatedIdeas = [];\n}\n\n// تنظيف النص العربي للمقارنة\nfunction normalizeArabic(value) {\n  return String(value || '')\n    .toLowerCase()\n    .replace(/[\\u064B-\\u065F\\u0670]/g, '')\n    .replace(/[أإآ]/g, 'ا')\n    .replace(/ة/g, 'ه')\n    .replace(/ى/g, 'ي')\n    .replace(/[^\\u0600-\\u06FFa-z0-9\\s]/gi, ' ')\n    .replace(/\\s+/g, ' ')\n    .trim();\n}\n\nconst STOP_WORDS = new Set([\n  'في', 'من', 'الى', 'إلى', 'عن', 'على', 'مع', 'هذا', 'هذه',\n  'ذلك', 'تلك', 'التي', 'الذي', 'أن', 'ان', 'لا', 'ما', 'ثم',\n  'قد', 'كان', 'تكون', 'ليس', 'كل', 'حين', 'عند', 'بعد', 'قبل',\n  'هو', 'هي', 'كما', 'لكن', 'لعل', 'بين', 'حتى', 'أو', 'و'\n]);\n\nfunction meaningfulTokens(value) {\n  return [...new Set(\n    normalizeArabic(value)\n      .split(/\\s+/)\n      .filter(token => token.length >= 3)\n      .filter(token => !STOP_WORDS.has(token))\n  )];\n}\n\nfunction similarityScore(a, b) {\n  const tokensA = meaningfulTokens(a);\n  const tokensB = meaningfulTokens(b);\n\n  if (!tokensA.length || !tokensB.length) return 0;\n\n  const setA = new Set(tokensA);\n  const setB = new Set(tokensB);\n\n  let intersection = 0;\n\n  for (const token of setA) {\n    if (setB.has(token)) intersection++;\n  }\n\n  const union = new Set([...setA, ...setB]).size;\n\n  return union ? intersection / union : 0;\n}\n\nfunction isTooSimilar(candidate, previous) {\n  const candidateNormalized = normalizeArabic(candidate);\n  const previousNormalized = normalizeArabic(previous);\n\n  if (!candidateNormalized || !previousNormalized) return false;\n\n  if (candidateNormalized === previousNormalized) return true;\n\n  const score = similarityScore(candidate, previous);\n\n  return score >= 0.62;\n}\n\nfunction cleanText(value) {\n  return String(value || '')\n    .replace(/[\\u{1F000}-\\u{1FFFF}\\u{2600}-\\u{27FF}]/gu, '')\n    .replace(/\\s+/g, ' ')\n    .trim();\n}\n\nfunction isValidArabicIdea(value) {\n  const text = cleanText(value);\n\n  return (\n    text.length >= 100 &&\n    /[\\u0600-\\u06FF]/.test(text)\n  );\n}\n\nfunction isValidPrompt(value) {\n  const text = cleanText(value);\n\n  const forbidden = /cctv|rescue|accident|gore|blood|violence|weapon|crime|crowd/i;\n\n  return (\n    text.length >= 120 &&\n    !/[\\u0600-\\u06FF]/.test(text) &&\n    !forbidden.test(text) &&\n    /9:16/i.test(text) &&\n    /veiled|hijab/i.test(text) &&\n    /lips/i.test(text)\n  );\n}\n\nfunction getFutureDate(daysAhead) {\n  const date = new Date();\n  date.setUTCDate(date.getUTCDate() + daysAhead);\n  return date.toISOString().slice(0, 10);\n}\n\n// الخطة التي حددتها عقدة Build Rolling Idea Bank Brief\nconst categoryPlan = Array.isArray(brief.category_plan)\n  ? brief.category_plan\n  : [];\n\nif (categoryPlan.length !== 3) {\n  throw new Error('Invalid category plan. Expected exactly 3 categories.');\n}\n\n// جميع الأفكار السابقة، مرتبة حسب الفئة\nconst previousByCategory = {};\n\nfor (const row of sheetRows) {\n  const category = cleanText(row.category);\n  const idea = cleanText(row.idea);\n\n  if (!category || !idea) continue;\n\n  if (!previousByCategory[category]) {\n    previousByCategory[category] = [];\n  }\n\n  previousByCategory[category].push(idea);\n}\n\n// نستخدم كل الأفكار السابقة لمنع التكرار\nconst acceptedIdeasByCategory = {};\n\nconst output = [];\nconst timestamp = Date.now();\n\nfor (let index = 0; index < categoryPlan.length; index++) {\n  const plan = categoryPlan[index];\n\n  // نبحث عن العنصر المطابق للفئة المطلوبة\n  const candidate = generatedIdeas.find(item => {\n    return cleanText(item.category) === plan.id;\n  });\n\n  if (!candidate) {\n    continue;\n  }\n\n  const idea = cleanText(candidate.idea);\n  const visualPrompt = cleanText(candidate.kling_prompt);\n  const angle = cleanText(candidate.angle);\n\n  // تحقق من جودة الفكرة\n  if (!isValidArabicIdea(idea)) {\n    continue;\n  }\n\n  // تحقق من جودة Visual Prompt\n  if (!isValidPrompt(visualPrompt)) {\n    continue;\n  }\n\n  const oldIdeas = previousByCategory[plan.id] || [];\n  const acceptedInSameCategory = acceptedIdeasByCategory[plan.id] || [];\n\n  const duplicatedWithOld = oldIdeas.some(oldIdea => {\n    return isTooSimilar(idea, oldIdea);\n  });\n\n  const duplicatedInBatch = acceptedInSameCategory.some(newIdea => {\n    return isTooSimilar(idea, newIdea);\n  });\n\n  // لا نضيف الفكرة إن كانت متكررة أو قريبة جدًا\n  if (duplicatedWithOld || duplicatedInBatch) {\n    continue;\n  }\n\n  if (!acceptedIdeasByCategory[plan.id]) {\n    acceptedIdeasByCategory[plan.id] = [];\n  }\n\n  acceptedIdeasByCategory[plan.id].push(idea);\n\n  let priority = cleanText(candidate.priority).toLowerCase();\n\n  if (!['high', 'medium'].includes(priority)) {\n    priority = 'medium';\n  }\n\n  output.push({\n    json: {\n      id: `auto_rolling_${timestamp}_${index + 1}`,\n\n      idea,\n      category: plan.id,\n\n      production_status: 'pending',\n      priority,\n\n      // الفكرة الأولى تحتاج غالبًا غدًا، الثانية بعد غد، الثالثة بعده\n      scheduled_date: getFutureDate(index + 1),\n      scheduled_time: '21:00',\n\n      // اسم العمود يبقى kling_prompt لتوافق الشيت والكود القديم\n      kling_prompt: visualPrompt,\n\n      youtube_title: '',\n      hashtags: '',\n\n      notes: [\n        'auto-generated rolling idea bank',\n        `angle=${angle || plan.required_angle || 'not_specified'}`,\n        `category=${plan.id}`,\n        `parseError=${parseError || 'none'}`\n      ].join(' | ')\n    }\n  });\n}\n\nreturn output;"
+        },
+        "id": "4d6031d7-bed8-4adf-a1c3-d798f3423c7c",
+        "name": "Parse New Ideas",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          5280,
+          0
+        ]
+      },
+      {
+        "parameters": {
+          "operation": "appendOrUpdate",
+          "documentId": {
+            "__rl": true,
+            "value": "1NUrA1tG2n_pcm0jiEIY1tUw7ms3nTufhKrbtGXaZsBg",
+            "mode": "list",
+            "cachedResultName": "Islamic Shorts",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1NUrA1tG2n_pcm0jiEIY1tUw7ms3nTufhKrbtGXaZsBg/edit?usp=drivesdk"
+          },
+          "sheetName": {
+            "__rl": true,
+            "value": 1250425104,
+            "mode": "list",
+            "cachedResultName": "ideas",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1NUrA1tG2n_pcm0jiEIY1tUw7ms3nTufhKrbtGXaZsBg/edit#gid=1250425104"
+          },
+          "columns": {
+            "mappingMode": "defineBelow",
+            "value": {
+              "id": "={{ $json.id }}",
+              "idea": "={{ $json.idea }}",
+              "category": "={{ $json.category }}",
+              "production_status": "={{ $json.production_status }}",
+              "priority": "={{ $json.priority }}",
+              "scheduled_time": "={{ $json.scheduled_time }}",
+              "youtube_title": "={{ $json.youtube_title }}",
+              "hashtags": "={{ $json.hashtags }}",
+              "notes": "={{ $json.notes }}",
+              "scheduled_date": "={{ $json.scheduled_date }}",
+              "kling_prompt": "={{ $json.kling_prompt }}"
+            },
+            "matchingColumns": [
+              "id"
+            ],
+            "schema": [
+              {
+                "id": "id",
+                "displayName": "id",
+                "required": false,
+                "defaultMatch": true,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "idea",
+                "displayName": "idea",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "category",
+                "displayName": "category",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "production_status",
+                "displayName": "production_status",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "priority",
+                "displayName": "priority",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "scheduled_date",
+                "displayName": "scheduled_date",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "scheduled_time",
+                "displayName": "scheduled_time",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "kling_prompt",
+                "displayName": "kling_prompt",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true,
+                "removed": false
+              },
+              {
+                "id": "youtube_title",
+                "displayName": "youtube_title",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "hashtags",
+                "displayName": "hashtags",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "quality_score",
+                "displayName": "quality_score",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true,
+                "removed": false
+              },
+              {
+                "id": "youtube_url",
+                "displayName": "youtube_url",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true,
+                "removed": true
+              },
+              {
+                "id": "job_id",
+                "displayName": "job_id",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true,
+                "removed": false
+              },
+              {
+                "id": "google_drive_url",
+                "displayName": "google_drive_url",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true,
+                "removed": false
+              },
+              {
+                "id": "notes",
+                "displayName": "notes",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              }
+            ],
+            "attemptToConvertTypes": false,
+            "convertFieldsToString": false
+          },
+          "options": {}
+        },
+        "id": "d08cd161-4985-4511-b32f-fcbb441eb7b1",
+        "name": "Append New Ideas to Sheet",
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.5,
+        "position": [
+          5504,
+          0
+        ],
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "GOOGLE_SHEETS_CRED_ID",
+            "name": "Google Sheets account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "append",
+          "documentId": {
+            "__rl": true,
+            "value": "1NUrA1tG2n_pcm0jiEIY1tUw7ms3nTufhKrbtGXaZsBg",
+            "mode": "list",
+            "cachedResultName": "Islamic Shorts",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1NUrA1tG2n_pcm0jiEIY1tUw7ms3nTufhKrbtGXaZsBg/edit?usp=drivesdk"
+          },
+          "sheetName": {
+            "__rl": true,
+            "value": 225532818,
+            "mode": "list",
+            "cachedResultName": "logs",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1NUrA1tG2n_pcm0jiEIY1tUw7ms3nTufhKrbtGXaZsBg/edit#gid=225532818"
+          },
+          "columns": {
+            "mappingMode": "defineBelow",
+            "value": {
+              "timestamp": "={{ new Date().toISOString() }}",
+              "job_id": "={{ .data?.taskId || .job_id || '' }}",
+              "category": "={{ .category || '' }}",
+              "topic": "={{ .youtube_title || .topic || .idea || '' }}",
+              "quality_score": "={{ .quality_score || '' }}",
+              "action": "video_failure",
+              "notes": "={{ (.data?.failMsg || .status_reason || 'Video generation failed') + ' | polls: ' + (._poll_count || 0) }}"
+            },
+            "matchingColumns": [],
+            "schema": [],
+            "ignoreIfItemNotFound": false,
+            "attemptToConvertTypes": false,
+            "convertFieldsToString": false
+          },
+          "options": {}
+        },
+        "id": "be2536d5-4847-4bf1-948f-39506cb72b30",
+        "name": "Log Video Failure",
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.5,
+        "position": [
+          2432,
+          224
+        ],
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "GOOGLE_SHEETS_CRED_ID",
+            "name": "Google Sheets account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "update",
+          "documentId": {
+            "__rl": true,
+            "value": "1NUrA1tG2n_pcm0jiEIY1tUw7ms3nTufhKrbtGXaZsBg",
+            "mode": "list",
+            "cachedResultName": "Islamic Shorts",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1NUrA1tG2n_pcm0jiEIY1tUw7ms3nTufhKrbtGXaZsBg/edit?usp=drivesdk"
+          },
+          "sheetName": {
+            "__rl": true,
+            "value": 225532818,
+            "mode": "list",
+            "cachedResultName": "logs",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1NUrA1tG2n_pcm0jiEIY1tUw7ms3nTufhKrbtGXaZsBg/edit#gid=225532818"
+          },
+          "columns": {
+            "mappingMode": "defineBelow",
+            "value": {
+              "job_id": "={{ $('Parse Context').first().json._task_id }}",
+              "action": "kie_failed",
+              "notes": "={{ 'Failed: ' + ($json.status_reason || 'unknown') + ' | context: ' + ($input.first().json.notes || '') }}"
+            },
+            "matchingColumns": [
+              "job_id"
+            ]
+          },
+          "options": {}
+        },
+        "id": "2ed203ef-472b-47f0-bb94-196c9530ba67",
+        "name": "Update Pending Failed",
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.5,
+        "position": [
+          2640,
+          224
+        ],
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "GOOGLE_SHEETS_CRED_ID",
+            "name": "Google Sheets account"
+          }
+        }
+      }
+    ],
+    "connections": {
+      "Schedule — Every 10 Min": {
+        "main": [
+          [
+            {
+              "node": "Get Pending Videos",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Get Pending Videos": {
+        "main": [
+          [
+            {
+              "node": "Filter Pending",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Filter Pending": {
+        "main": [
+          [
+            {
+              "node": "Parse Context",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Parse Context": {
+        "main": [
+          [
+            {
+              "node": "Smart Classifier",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Smart Classifier": {
+        "main": [
+          [
+            {
+              "node": "Parse Gemini Output",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Parse Gemini Output": {
+        "main": [
+          [
+            {
+              "node": "KIE — Poll Wan Status",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "KIE — Poll Wan Status": {
+        "main": [
+          [
+            {
+              "node": "Check Status + Timeout",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Check Status + Timeout": {
+        "main": [
+          [
+            {
+              "node": "Video Ready? (IF)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Video Ready? (IF)": {
+        "main": [
+          [
+            {
+              "node": "Success or Failed?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Success or Failed?": {
+        "main": [
+          [
+            {
+              "node": "Extract Video URL",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Log Video Failure",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Extract Video URL": {
+        "main": [
+          [
+            {
+              "node": "Download Video",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Download Video": {
+        "main": [
+          [
+            {
+              "node": "Google Drive Upload",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Google Drive Upload": {
+        "main": [
+          [
+            {
+              "node": "Share file",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Share file": {
+        "main": [
+          [
+            {
+              "node": "Append or update row in sheet",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Append or update row in sheet": {
+        "main": [
+          [
+            {
+              "node": "Pre-Publish Builder",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Pre-Publish Builder": {
+        "main": [
+          [
+            {
+              "node": "YouTube Upload",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "YouTube Upload": {
+        "main": [
+          [
+            {
+              "node": "Mark Completed",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Mark Completed": {
+        "main": [
+          [
+            {
+              "node": "Log Success",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Log Success": {
+        "main": [
+          [
+            {
+              "node": "Update Pending Done",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Update Pending Done": {
+        "main": [
+          [
+            {
+              "node": "Get Ideas (ideas sheet)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Get Ideas (ideas sheet)": {
+        "main": [
+          [
+            {
+              "node": "Build Rolling Idea Bank Brief",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Build Rolling Idea Bank Brief": {
+        "main": [
+          [
+            {
+              "node": "Auto Idea Generator",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Auto Idea Generator": {
+        "main": [
+          [
+            {
+              "node": "Parse New Ideas",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Parse New Ideas": {
+        "main": [
+          [
+            {
+              "node": "Append New Ideas to Sheet",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Log Video Failure": {
+        "main": [
+          [
+            {
+              "node": "Update Pending Failed",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "OpenAI Chat Model (Ideas)": {
+        "ai_languageModel": [
+          [
+            {
+              "node": "Auto Idea Generator",
+              "type": "ai_languageModel",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Mohammed Almakhlafi",
+    "name": null,
+    "description": null,
+    "autosaved": false,
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-10-04T16:11:06.354Z",
+        "id": 1338,
+        "workflowId": "3vutRqQotisSlwZM",
+        "versionId": "8e8f6550-8715-470b-956a-0ac6146af3e2",
+        "event": "activated",
+        "userId": "9bc9f432-10e2-4c09-8243-a0911882a370"
+      }
+    ]
+  }
+}
