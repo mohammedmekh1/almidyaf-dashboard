@@ -1,0 +1,636 @@
+{
+  "name": "Bluevia — BV2 KIE Checker & Blotato Publisher (every 30 min)",
+  "nodes": [
+    {
+      "id": "bvc-trigger-001",
+      "name": "Schedule — Every 30 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 30
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "bvc-read-logs-001",
+      "name": "Read Logs — Pending KIE Jobs",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [440, 300],
+      "parameters": {
+        "operation": "getAll",
+        "documentId": {
+          "__rl": true,
+          "value": "BLUEVIA_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "logs",
+          "mode": "name"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "value1": "action",
+              "condition": "eq",
+              "value2": "pending_kie"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "id": "bvc-if-has-pending-001",
+      "name": "Has Pending Jobs?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [640, 300],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "cond-pending",
+              "leftValue": "={{ $input.all().length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "bvc-noop-no-pending-001",
+      "name": "No Pending Jobs — Stop",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [840, 480],
+      "parameters": {}
+    },
+    {
+      "id": "bvc-split-001",
+      "name": "Split Pending Jobs",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [840, 200],
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      }
+    },
+    {
+      "id": "bvc-kie-poll-001",
+      "name": "KIE — Poll Job Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1040, 200],
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.kie.ai/api/v1/jobs/{{ $json.job_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer KIE_BEARER_TOKEN_BLUEVIA_PLACEHOLDER"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "bvc-if-completed-001",
+      "name": "Is Job Completed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1240, 200],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "cond-status",
+              "leftValue": "={{ ($json.data?.status ?? $json.status ?? '').toLowerCase() }}",
+              "rightValue": "completed",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "bvc-noop-not-done-001",
+      "name": "Still Processing — Skip",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1440, 380],
+      "parameters": {}
+    },
+    {
+      "id": "bvc-extract-video-001",
+      "name": "Extract Video URL",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1440, 120],
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "field-video-url",
+              "name": "video_url",
+              "value": "={{ $json.data?.output?.video_url ?? $json.output?.video_url ?? $json.data?.video_url ?? $json.video_url ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "field-job-id",
+              "name": "job_id",
+              "value": "={{ $('Read Logs — Pending KIE Jobs').item.json.job_id }}",
+              "type": "string"
+            },
+            {
+              "id": "field-idea-id",
+              "name": "idea_id",
+              "value": "={{ $('Read Logs — Pending KIE Jobs').item.json.idea_id }}",
+              "type": "string"
+            },
+            {
+              "id": "field-character",
+              "name": "character",
+              "value": "={{ $('Read Logs — Pending KIE Jobs').item.json.character }}",
+              "type": "string"
+            },
+            {
+              "id": "field-topic",
+              "name": "topic",
+              "value": "={{ $('Read Logs — Pending KIE Jobs').item.json.topic }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "bvc-read-idea-detail-001",
+      "name": "Read Idea Details",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1640, 120],
+      "parameters": {
+        "operation": "getAll",
+        "documentId": {
+          "__rl": true,
+          "value": "BLUEVIA_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "ideas",
+          "mode": "name"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "value1": "id",
+              "condition": "eq",
+              "value2": "={{ $json.idea_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "id": "bvc-build-caption-001",
+      "name": "Build YouTube Caption & Hashtags",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1840, 120],
+      "parameters": {
+        "jsCode": "// ================================================================\n// Build final YouTube caption, description, and Blotato caption\n// ================================================================\n\nconst idea = $('Read Idea Details').first().json;\nconst extracted = $('Extract Video URL').first().json;\n\nconst destination   = String(idea.destination || '');\nconst ideaAr        = String(idea.idea_ar || extracted.topic || '');\nconst ytCaption     = String(idea.youtube_caption || '');\nconst character     = String(extracted.character || '');\nconst videoUrl      = String(extracted.video_url || '');\nconst jobId         = String(extracted.job_id || '');\nconst ideaId        = String(extracted.idea_id || '');\n\n// ---- YouTube title (max 100 chars) ----\nconst ytTitle = ytCaption\n  ? ytCaption.split('|')[0].trim().slice(0, 95)\n  : `${destination} | بلوفيا ترافل — رحلة تستحق`;\n\n// ---- YouTube description ----\nconst ytDescription = [\n  ideaAr,\n  '',\n  '━━━━━━━━━━━━━━━━━━━━━━━━━',\n  '🌍 بلوفيا ترافل | Bluevia Travel',\n  '✈️ رحلات إلى تركيا وتونس',\n  '📱 واتساب: https://wa.me/905068668849',\n  '🌐 الموقع: https://blueviatravel.com',\n  '━━━━━━━━━━━━━━━━━━━━━━━━━',\n  ytCaption ? ytCaption.split('#').slice(1).map(t => '#' + t.trim()).join(' ') : '#BlueviaTravel #SiyahaSiyaha #Turkey #Tunisia'\n].join('\\n');\n\n// ---- Social media caption (TikTok, Instagram, etc.) ----\nconst socialCaption = [\n  ideaAr,\n  '',\n  '✈️ بلوفيا ترافل | Bluevia Travel',\n  '📱 احجز عبر واتساب: wa.me/905068668849',\n  '🌐 blueviatravel.com',\n  '',\n  ytCaption.includes('#') ? ytCaption.split('#').slice(1).map(t => '#' + t.trim()).join(' ') : '#بلوفيا_ترافل #سياحة #تركيا #تونس #BlueviaTravel'\n].join('\\n');\n\nreturn [{\n  json: {\n    video_url:        videoUrl,\n    job_id:           jobId,\n    idea_id:          ideaId,\n    character,\n    destination,\n    ideaAr,\n    ytTitle,\n    ytDescription,\n    socialCaption,\n    timestamp:        new Date().toISOString()\n  }\n}];\n"
+      }
+    },
+    {
+      "id": "bvc-blotato-yt-001",
+      "name": "Blotato — Publish to YouTube",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2040, 0],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.blotato.com/v1/posts",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer BLOTATO_API_KEY_PLACEHOLDER"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "body": {
+          "account_id": 111,
+          "media_url": "={{ $json.video_url }}",
+          "caption": "={{ $json.ytTitle }}",
+          "description": "={{ $json.ytDescription }}",
+          "post_type": "short"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "bvc-blotato-tiktok-001",
+      "name": "Blotato — Publish to TikTok",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2040, 140],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.blotato.com/v1/posts",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer BLOTATO_API_KEY_PLACEHOLDER"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "body": {
+          "account_id": 42676,
+          "media_url": "={{ $('Build YouTube Caption & Hashtags').item.json.video_url }}",
+          "caption": "={{ $('Build YouTube Caption & Hashtags').item.json.socialCaption }}",
+          "post_type": "video"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "bvc-blotato-ig-001",
+      "name": "Blotato — Publish to Instagram",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2040, 280],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.blotato.com/v1/posts",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer BLOTATO_API_KEY_PLACEHOLDER"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "body": {
+          "account_id": 47564,
+          "media_url": "={{ $('Build YouTube Caption & Hashtags').item.json.video_url }}",
+          "caption": "={{ $('Build YouTube Caption & Hashtags').item.json.socialCaption }}",
+          "post_type": "reel"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "bvc-blotato-fb-001",
+      "name": "Blotato — Publish to Facebook",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2040, 420],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.blotato.com/v1/posts",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer BLOTATO_API_KEY_PLACEHOLDER"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "body": {
+          "account_id": 32251,
+          "page_id": 772644459275664,
+          "media_url": "={{ $('Build YouTube Caption & Hashtags').item.json.video_url }}",
+          "caption": "={{ $('Build YouTube Caption & Hashtags').item.json.socialCaption }}",
+          "post_type": "reel"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "bvc-blotato-twitter-001",
+      "name": "Blotato — Publish to X/Twitter",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2040, 560],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.blotato.com/v1/posts",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer BLOTATO_API_KEY_PLACEHOLDER"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "body": {
+          "account_id": 38,
+          "media_url": "={{ $('Build YouTube Caption & Hashtags').item.json.video_url }}",
+          "caption": "={{ $('Build YouTube Caption & Hashtags').item.json.socialCaption.slice(0, 280) }}",
+          "post_type": "video"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "bvc-blotato-threads-001",
+      "name": "Blotato — Publish to Threads",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2040, 700],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.blotato.com/v1/posts",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer BLOTATO_API_KEY_PLACEHOLDER"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "body": {
+          "account_id": 3,
+          "media_url": "={{ $('Build YouTube Caption & Hashtags').item.json.video_url }}",
+          "caption": "={{ $('Build YouTube Caption & Hashtags').item.json.socialCaption }}",
+          "post_type": "video"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "bvc-collect-ids-001",
+      "name": "Collect Blotato Post IDs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2260, 360],
+      "parameters": {
+        "jsCode": "// Collect post IDs from all Blotato responses\nconst ytResult      = $('Blotato — Publish to YouTube').first().json;\nconst tiktokResult  = $('Blotato — Publish to TikTok').first().json;\nconst igResult      = $('Blotato — Publish to Instagram').first().json;\nconst fbResult      = $('Blotato — Publish to Facebook').first().json;\nconst twitterResult = $('Blotato — Publish to X/Twitter').first().json;\nconst threadsResult = $('Blotato — Publish to Threads').first().json;\n\nconst getId = (obj) => obj?.data?.id ?? obj?.id ?? obj?.post_id ?? 'unknown';\n\nconst ytUrl = ytResult?.data?.url ?? ytResult?.url ?? '';\n\nconst blotato_ids = [\n  `yt:${getId(ytResult)}`,\n  `tt:${getId(tiktokResult)}`,\n  `ig:${getId(igResult)}`,\n  `fb:${getId(fbResult)}`,\n  `tw:${getId(twitterResult)}`,\n  `th:${getId(threadsResult)}`\n].join(' | ');\n\nreturn [{\n  json: {\n    blotato_post_ids: blotato_ids,\n    youtube_url: ytUrl,\n    video_url: $('Build YouTube Caption & Hashtags').first().json.video_url,\n    job_id: $('Build YouTube Caption & Hashtags').first().json.job_id,\n    idea_id: $('Build YouTube Caption & Hashtags').first().json.idea_id,\n    timestamp: new Date().toISOString()\n  }\n}];\n"
+      }
+    },
+    {
+      "id": "bvc-log-update-001",
+      "name": "Update Log → completed",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [2460, 360],
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "BLUEVIA_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "logs",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "job_id": "={{ $json.job_id }}",
+            "action": "completed",
+            "video_url": "={{ $json.video_url }}",
+            "youtube_url": "={{ $json.youtube_url }}",
+            "blotato_post_id": "={{ $json.blotato_post_ids }}"
+          }
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "id": "bvc-idea-done-001",
+      "name": "Update Idea → completed",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [2660, 360],
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "BLUEVIA_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "ideas",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $json.idea_id }}",
+            "production_status": "completed"
+          }
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Schedule — Every 30 Minutes": {
+      "main": [
+        [{ "node": "Read Logs — Pending KIE Jobs", "type": "main", "index": 0 }]
+      ]
+    },
+    "Read Logs — Pending KIE Jobs": {
+      "main": [
+        [{ "node": "Has Pending Jobs?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Has Pending Jobs?": {
+      "main": [
+        [{ "node": "Split Pending Jobs", "type": "main", "index": 0 }],
+        [{ "node": "No Pending Jobs — Stop", "type": "main", "index": 0 }]
+      ]
+    },
+    "Split Pending Jobs": {
+      "main": [
+        [{ "node": "KIE — Poll Job Status", "type": "main", "index": 0 }]
+      ]
+    },
+    "KIE — Poll Job Status": {
+      "main": [
+        [{ "node": "Is Job Completed?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Is Job Completed?": {
+      "main": [
+        [{ "node": "Extract Video URL", "type": "main", "index": 0 }],
+        [{ "node": "Still Processing — Skip", "type": "main", "index": 0 }]
+      ]
+    },
+    "Extract Video URL": {
+      "main": [
+        [{ "node": "Read Idea Details", "type": "main", "index": 0 }]
+      ]
+    },
+    "Read Idea Details": {
+      "main": [
+        [{ "node": "Build YouTube Caption & Hashtags", "type": "main", "index": 0 }]
+      ]
+    },
+    "Build YouTube Caption & Hashtags": {
+      "main": [
+        [
+          { "node": "Blotato — Publish to YouTube",   "type": "main", "index": 0 },
+          { "node": "Blotato — Publish to TikTok",    "type": "main", "index": 0 },
+          { "node": "Blotato — Publish to Instagram", "type": "main", "index": 0 },
+          { "node": "Blotato — Publish to Facebook",  "type": "main", "index": 0 },
+          { "node": "Blotato — Publish to X/Twitter", "type": "main", "index": 0 },
+          { "node": "Blotato — Publish to Threads",   "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Blotato — Publish to YouTube": {
+      "main": [
+        [{ "node": "Collect Blotato Post IDs", "type": "main", "index": 0 }]
+      ]
+    },
+    "Blotato — Publish to TikTok": {
+      "main": [
+        [{ "node": "Collect Blotato Post IDs", "type": "main", "index": 1 }]
+      ]
+    },
+    "Blotato — Publish to Instagram": {
+      "main": [
+        [{ "node": "Collect Blotato Post IDs", "type": "main", "index": 2 }]
+      ]
+    },
+    "Blotato — Publish to Facebook": {
+      "main": [
+        [{ "node": "Collect Blotato Post IDs", "type": "main", "index": 3 }]
+      ]
+    },
+    "Blotato — Publish to X/Twitter": {
+      "main": [
+        [{ "node": "Collect Blotato Post IDs", "type": "main", "index": 4 }]
+      ]
+    },
+    "Blotato — Publish to Threads": {
+      "main": [
+        [{ "node": "Collect Blotato Post IDs", "type": "main", "index": 5 }]
+      ]
+    },
+    "Collect Blotato Post IDs": {
+      "main": [
+        [{ "node": "Update Log → completed", "type": "main", "index": 0 }]
+      ]
+    },
+    "Update Log → completed": {
+      "main": [
+        [{ "node": "Update Idea → completed", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {},
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "instanceId": "bluevia-travel-video-system"
+  }
+}

@@ -1,0 +1,575 @@
+{
+  "name": "Bluevia — BV1 Main Video Producer (every 3 days)",
+  "nodes": [
+    {
+      "id": "bv-trigger-001",
+      "name": "Schedule — Every 3 Days",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "daysInterval": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "bv-read-config-001",
+      "name": "Read Config Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [440, 300],
+      "parameters": {
+        "operation": "getAll",
+        "documentId": {
+          "__rl": true,
+          "value": "BLUEVIA_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "config",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "id": "bv-read-ideas-001",
+      "name": "Read Ideas Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [640, 300],
+      "parameters": {
+        "operation": "getAll",
+        "documentId": {
+          "__rl": true,
+          "value": "BLUEVIA_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "ideas",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "id": "bv-determine-char-001",
+      "name": "Determine Character & Select Idea",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [840, 300],
+      "parameters": {
+        "jsCode": "// ================================================================\n// Bluevia — Determine Character & Select Best Pending Idea\n// ================================================================\n\nconst configRows = $('Read Config Sheet').all().map(i => i.json);\nconst ideasRows  = $('Read Ideas Sheet').all().map(i => i.json);\n\n// ---- Parse config into a key→value map ----\nconst config = {};\nfor (const row of configRows) {\n  if (row.key) config[row.key] = row.value;\n}\n\nconst cycleCounter  = parseInt(config.cycle_counter ?? 0, 10);\nconst character     = (cycleCounter % 2 === 0) ? 'female' : 'male';\nconst characterName = (character === 'female') ? 'ليلى' : 'فارس';\nconst voiceId       = (character === 'female')\n  ? (config.elevenlabs_voice_female ?? 'EXAVITQu4vr4xnSDxMaL')\n  : (config.elevenlabs_voice_male   ?? 'onwK4e9ZLuTAKqWW03F9');\nconst imageUrl      = (character === 'female')\n  ? config.female_image_url\n  : config.male_image_url;\n\n// ---- Find best pending idea for this character ----\nconst pendingIdeas = ideasRows.filter(row => {\n  return (\n    String(row.production_status).toLowerCase() === 'pending' &&\n    String(row.character).toLowerCase() === character\n  );\n});\n\n// Sort: high priority first, then by id\nconst priorityOrder = { high: 0, medium: 1, low: 2 };\npendingIdeas.sort((a, b) => {\n  const pa = priorityOrder[String(a.priority).toLowerCase()] ?? 2;\n  const pb = priorityOrder[String(b.priority).toLowerCase()] ?? 2;\n  if (pa !== pb) return pa - pb;\n  return String(a.id).localeCompare(String(b.id));\n});\n\nconst selectedIdea = pendingIdeas[0] ?? null;\n\nif (!selectedIdea) {\n  return [{\n    json: {\n      found: false,\n      character,\n      characterName,\n      cycleCounter,\n      message: `No pending ideas for character=${character} (cycle ${cycleCounter})`\n    }\n  }];\n}\n\n// ---- Build voiceover script with CTA ----\nconst rawScript = String(selectedIdea.voiceover_script_ar || selectedIdea.idea_ar || '');\nconst ctaLine   = character === 'female'\n  ? 'تواصلي معنا اليوم عبر واتساب أو من خلال موقع blueviatravel.com'\n  : 'تواصل معنا اليوم عبر واتساب أو من خلال موقع blueviatravel.com';\n\n// Ensure script ends with CTA\nconst voiceoverScript = rawScript.includes('blueviatravel')\n  ? rawScript\n  : `${rawScript} ${ctaLine}`;\n\n// ---- Build KIE kling_prompt ----\nconst klingPrompt = String(selectedIdea.kling_prompt || '');\n\nreturn [{\n  json: {\n    found: true,\n    idea_id:          String(selectedIdea.id),\n    idea_ar:          String(selectedIdea.idea_ar || ''),\n    category:         String(selectedIdea.category || ''),\n    destination:      String(selectedIdea.destination || ''),\n    character,\n    characterName,\n    voiceId,\n    imageUrl,\n    voiceoverScript,\n    klingPrompt,\n    youtubeCaption:   String(selectedIdea.youtube_caption || ''),\n    cycleCounter,\n    nextCycleCounter: cycleCounter + 1,\n    timestamp:        new Date().toISOString()\n  }\n}];\n"
+      }
+    },
+    {
+      "id": "bv-if-idea-001",
+      "name": "Has Pending Idea?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1040, 300],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-found",
+              "leftValue": "={{ $json.found }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "bv-noop-no-idea-001",
+      "name": "No Pending Ideas — Stop",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1240, 480],
+      "parameters": {}
+    },
+    {
+      "id": "bv-tts-001",
+      "name": "ElevenLabs — Generate Arabic Voiceover",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1240, 200],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.elevenlabs.io/v1/text-to-speech/{{ $json.voiceId }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "xi-api-key",
+              "value": "ELEVENLABS_API_KEY_PLACEHOLDER"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "body": {
+          "text": "={{ $json.voiceoverScript }}",
+          "model_id": "eleven_multilingual_v2",
+          "voice_settings": {
+            "stability": 0.70,
+            "similarity_boost": 0.82,
+            "style": 0.25,
+            "use_speaker_boost": true
+          }
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "bv-drive-upload-001",
+      "name": "Upload Audio to Google Drive",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [1440, 200],
+      "parameters": {
+        "operation": "upload",
+        "name": "=bluevia_audio_{{ $('Determine Character & Select Idea').item.json.idea_id }}_{{ Date.now() }}.mp3",
+        "driveId": {
+          "__rl": true,
+          "value": "My Drive",
+          "mode": "list"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "BLUEVIA_DRIVE_FOLDER_ID",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "GOOGLE_DRIVE_CREDENTIAL_ID",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "id": "bv-drive-share-001",
+      "name": "Make Audio File Public",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [1640, 200],
+      "parameters": {
+        "operation": "share",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "permissions": {
+          "permissionsUi": {
+            "permissionsValues": {
+              "role": "reader",
+              "type": "anyone"
+            }
+          }
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "GOOGLE_DRIVE_CREDENTIAL_ID",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "id": "bv-build-audio-url-001",
+      "name": "Build Direct Audio URL",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1840, 200],
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "field-audio-url",
+              "name": "audio_url",
+              "value": "=https://drive.google.com/uc?export=download&id={{ $('Upload Audio to Google Drive').item.json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "field-idea-id",
+              "name": "idea_id",
+              "value": "={{ $('Determine Character & Select Idea').item.json.idea_id }}",
+              "type": "string"
+            },
+            {
+              "id": "field-character",
+              "name": "character",
+              "value": "={{ $('Determine Character & Select Idea').item.json.character }}",
+              "type": "string"
+            },
+            {
+              "id": "field-character-name",
+              "name": "characterName",
+              "value": "={{ $('Determine Character & Select Idea').item.json.characterName }}",
+              "type": "string"
+            },
+            {
+              "id": "field-voice-id",
+              "name": "voiceId",
+              "value": "={{ $('Determine Character & Select Idea').item.json.voiceId }}",
+              "type": "string"
+            },
+            {
+              "id": "field-image-url",
+              "name": "imageUrl",
+              "value": "={{ $('Determine Character & Select Idea').item.json.imageUrl }}",
+              "type": "string"
+            },
+            {
+              "id": "field-kling-prompt",
+              "name": "klingPrompt",
+              "value": "={{ $('Determine Character & Select Idea').item.json.klingPrompt }}",
+              "type": "string"
+            },
+            {
+              "id": "field-yt-caption",
+              "name": "youtubeCaption",
+              "value": "={{ $('Determine Character & Select Idea').item.json.youtubeCaption }}",
+              "type": "string"
+            },
+            {
+              "id": "field-destination",
+              "name": "destination",
+              "value": "={{ $('Determine Character & Select Idea').item.json.destination }}",
+              "type": "string"
+            },
+            {
+              "id": "field-cycle",
+              "name": "cycleCounter",
+              "value": "={{ $('Determine Character & Select Idea').item.json.cycleCounter }}",
+              "type": "number"
+            },
+            {
+              "id": "field-next-cycle",
+              "name": "nextCycleCounter",
+              "value": "={{ $('Determine Character & Select Idea').item.json.nextCycleCounter }}",
+              "type": "number"
+            },
+            {
+              "id": "field-timestamp",
+              "name": "timestamp",
+              "value": "={{ $('Determine Character & Select Idea').item.json.timestamp }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "bv-kie-submit-001",
+      "name": "KIE — Submit Avatar Video Job",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2040, 200],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.kie.ai/api/v1/jobs/createTask",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer KIE_BEARER_TOKEN_BLUEVIA_PLACEHOLDER"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "body": {
+          "model": "kling/ai-avatar-pro",
+          "input": {
+            "image_url": "={{ $json.imageUrl }}",
+            "audio_url": "={{ $json.audio_url }}",
+            "prompt": "={{ $json.klingPrompt }}",
+            "aspect_ratio": "9:16",
+            "mode": "pro",
+            "caption": false
+          }
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "bv-log-add-001",
+      "name": "Add Log Row (pending_kie)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [2240, 200],
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "BLUEVIA_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "logs",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "timestamp": "={{ $('Build Direct Audio URL').item.json.timestamp }}",
+            "job_id": "={{ $json.data?.job_id ?? $json.job_id ?? $json.id ?? 'unknown' }}",
+            "idea_id": "={{ $('Build Direct Audio URL').item.json.idea_id }}",
+            "character": "={{ $('Build Direct Audio URL').item.json.characterName }}",
+            "topic": "={{ $('Determine Character & Select Idea').item.json.idea_ar }}",
+            "action": "pending_kie",
+            "video_url": "",
+            "youtube_url": "",
+            "blotato_post_id": "",
+            "notes": "=cycle={{ $('Build Direct Audio URL').item.json.cycleCounter }} | dest={{ $('Build Direct Audio URL').item.json.destination }} | voice={{ $('Build Direct Audio URL').item.json.voiceId }}"
+          }
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "id": "bv-idea-update-001",
+      "name": "Update Idea → in_production",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [2440, 200],
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "BLUEVIA_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "ideas",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $('Build Direct Audio URL').item.json.idea_id }}",
+            "production_status": "in_production"
+          }
+        },
+        "options": {
+          "locationDefine": {
+            "values": {
+              "headerRow": 1,
+              "firstDataRow": 2
+            }
+          }
+        }
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "id": "bv-config-update-001",
+      "name": "Increment Cycle Counter",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [2640, 200],
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "BLUEVIA_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "config",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "key": "cycle_counter",
+            "value": "={{ $('Build Direct Audio URL').item.json.nextCycleCounter }}"
+          }
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "id": "bv-config-char-update-001",
+      "name": "Update Last Character",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [2840, 200],
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "BLUEVIA_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "config",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "key": "last_character",
+            "value": "={{ $('Build Direct Audio URL').item.json.character }}"
+          }
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Schedule — Every 3 Days": {
+      "main": [
+        [{ "node": "Read Config Sheet", "type": "main", "index": 0 }]
+      ]
+    },
+    "Read Config Sheet": {
+      "main": [
+        [{ "node": "Read Ideas Sheet", "type": "main", "index": 0 }]
+      ]
+    },
+    "Read Ideas Sheet": {
+      "main": [
+        [{ "node": "Determine Character & Select Idea", "type": "main", "index": 0 }]
+      ]
+    },
+    "Determine Character & Select Idea": {
+      "main": [
+        [{ "node": "Has Pending Idea?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Has Pending Idea?": {
+      "main": [
+        [{ "node": "ElevenLabs — Generate Arabic Voiceover", "type": "main", "index": 0 }],
+        [{ "node": "No Pending Ideas — Stop", "type": "main", "index": 0 }]
+      ]
+    },
+    "ElevenLabs — Generate Arabic Voiceover": {
+      "main": [
+        [{ "node": "Upload Audio to Google Drive", "type": "main", "index": 0 }]
+      ]
+    },
+    "Upload Audio to Google Drive": {
+      "main": [
+        [{ "node": "Make Audio File Public", "type": "main", "index": 0 }]
+      ]
+    },
+    "Make Audio File Public": {
+      "main": [
+        [{ "node": "Build Direct Audio URL", "type": "main", "index": 0 }]
+      ]
+    },
+    "Build Direct Audio URL": {
+      "main": [
+        [{ "node": "KIE — Submit Avatar Video Job", "type": "main", "index": 0 }]
+      ]
+    },
+    "KIE — Submit Avatar Video Job": {
+      "main": [
+        [{ "node": "Add Log Row (pending_kie)", "type": "main", "index": 0 }]
+      ]
+    },
+    "Add Log Row (pending_kie)": {
+      "main": [
+        [{ "node": "Update Idea → in_production", "type": "main", "index": 0 }]
+      ]
+    },
+    "Update Idea → in_production": {
+      "main": [
+        [{ "node": "Increment Cycle Counter", "type": "main", "index": 0 }]
+      ]
+    },
+    "Increment Cycle Counter": {
+      "main": [
+        [{ "node": "Update Last Character", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {},
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "instanceId": "bluevia-travel-video-system"
+  }
+}

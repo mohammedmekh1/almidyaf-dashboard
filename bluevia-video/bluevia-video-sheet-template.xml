@@ -1,0 +1,298 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+  xmlns:o="urn:schemas-microsoft-com:office:office"
+  xmlns:x="urn:schemas-microsoft-com:office:excel"
+  xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
+  xmlns:html="http://www.w3.org/TR/REC-html40">
+  <DocumentProperties xmlns="urn:schemas-microsoft-com:office:office">
+    <Title>Bluevia Travel — Video Ads System</Title>
+    <Author>Bluevia Travel Automation</Author>
+    <Created>2026-10-04T00:00:00Z</Created>
+  </DocumentProperties>
+  <Styles>
+    <Style ss:ID="header">
+      <Font ss:Bold="1" ss:Color="#FFFFFF" ss:Size="11"/>
+      <Interior ss:Color="#07182D" ss:Pattern="Solid"/>
+      <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
+    </Style>
+    <Style ss:ID="subheader">
+      <Font ss:Bold="1" ss:Color="#07182D" ss:Size="10"/>
+      <Interior ss:Color="#C5A059" ss:Pattern="Solid"/>
+    </Style>
+    <Style ss:ID="data">
+      <Font ss:Color="#000000" ss:Size="10"/>
+      <Alignment ss:Vertical="Center" ss:WrapText="1"/>
+    </Style>
+    <Style ss:ID="pending">
+      <Font ss:Color="#000000" ss:Size="10"/>
+      <Interior ss:Color="#FFF9C4" ss:Pattern="Solid"/>
+    </Style>
+    <Style ss:ID="completed">
+      <Font ss:Color="#000000" ss:Size="10"/>
+      <Interior ss:Color="#C8E6C9" ss:Pattern="Solid"/>
+    </Style>
+  </Styles>
+
+  <!-- ======================================================= -->
+  <!-- SHEET 1: ideas — بنك أفكار إعلانات الفيديو               -->
+  <!-- ======================================================= -->
+  <Worksheet ss:Name="ideas">
+    <Table ss:DefaultRowHeight="20">
+      <Column ss:Width="60"/>
+      <Column ss:Width="200"/>
+      <Column ss:Width="80"/>
+      <Column ss:Width="100"/>
+      <Column ss:Width="80"/>
+      <Column ss:Width="100"/>
+      <Column ss:Width="350"/>
+      <Column ss:Width="350"/>
+      <Column ss:Width="300"/>
+      <Column ss:Width="80"/>
+      <Column ss:Width="120"/>
+
+      <!-- Header Row -->
+      <Row ss:Height="30">
+        <Cell ss:StyleID="header"><Data ss:Type="String">id</Data></Cell>
+        <Cell ss:StyleID="header"><Data ss:Type="String">idea_ar</Data></Cell>
+        <Cell ss:StyleID="header"><Data ss:Type="String">category</Data></Cell>
+        <Cell ss:StyleID="header"><Data ss:Type="String">destination</Data></Cell>
+        <Cell ss:StyleID="header"><Data ss:Type="String">character</Data></Cell>
+        <Cell ss:StyleID="header"><Data ss:Type="String">destination_en</Data></Cell>
+        <Cell ss:StyleID="header"><Data ss:Type="String">voiceover_script_ar</Data></Cell>
+        <Cell ss:StyleID="header"><Data ss:Type="String">kling_prompt</Data></Cell>
+        <Cell ss:StyleID="header"><Data ss:Type="String">youtube_caption</Data></Cell>
+        <Cell ss:StyleID="header"><Data ss:Type="String">priority</Data></Cell>
+        <Cell ss:StyleID="header"><Data ss:Type="String">production_status</Data></Cell>
+      </Row>
+
+      <!-- Sample Row 1 - Female - Istanbul -->
+      <Row ss:Height="80" ss:StyleID="pending">
+        <Cell><Data ss:Type="String">BV-001</Data></Cell>
+        <Cell><Data ss:Type="String">وقفتِ أمام البوسفور وأدركتِ أن بعض اللحظات لا تُنسى — إسطنبول تنتظرك</Data></Cell>
+        <Cell><Data ss:Type="String">turkey_istanbul</Data></Cell>
+        <Cell><Data ss:Type="String">إسطنبول</Data></Cell>
+        <Cell><Data ss:Type="String">female</Data></Cell>
+        <Cell><Data ss:Type="String">Istanbul</Data></Cell>
+        <Cell><Data ss:Type="String">وقفتِ أمام البوسفور وأدركتِ أن بعض اللحظات لا تُنسى. إسطنبول التي تجمع الشرق بالغرب تنتظرك مع بلوفيا ترافل — رحلات مدروسة وإقامة فاخرة وخدمة شخصية. احجزي رحلتك الآن عبر واتساب أو blueviatravel.com</Data></Cell>
+        <Cell><Data ss:Type="String">A young elegant Arab woman named Layla, 27 years old, wearing ivory silk hijab, warm confident smile, medium close-up, visible lips, soft cinematic lighting, Bosphorus Istanbul luxury hotel rooftop in background, vertical 9:16, no text, no subtitles, no watermark, no extra people</Data></Cell>
+        <Cell><Data ss:Type="String">إسطنبول والبوسفور | رحلات فاخرة مع بلوفيا ترافل إلى تركيا | #BlueviaTravel #Istanbul #Turkey #LuxuryTravel</Data></Cell>
+        <Cell><Data ss:Type="String">high</Data></Cell>
+        <Cell><Data ss:Type="String">pending</Data></Cell>
+      </Row>
+
+      <!-- Sample Row 2 - Male - Tunisia -->
+      <Row ss:Height="80" ss:StyleID="pending">
+        <Cell><Data ss:Type="String">BV-002</Data></Cell>
+        <Cell><Data ss:Type="String">سيدي بوسعيد — حيث الأزرق يلتقي بالأبيض في مشهد لا تنساه</Data></Cell>
+        <Cell><Data ss:Type="String">tunisia_sidi_bou_said</Data></Cell>
+        <Cell><Data ss:Type="String">سيدي بوسعيد</Data></Cell>
+        <Cell><Data ss:Type="String">male</Data></Cell>
+        <Cell><Data ss:Type="String">Sidi Bou Said</Data></Cell>
+        <Cell><Data ss:Type="String">سيدي بوسعيد حيث الأزرق يلتقي بالأبيض في مشهد لا تنساه. أزقة عتيقة وبحر متوسط وهواء نقي ينتظرك في رحلة أعدّتها لك بلوفيا ترافل بكل اعتناء. تواصل معنا اليوم عبر واتساب أو blueviatravel.com</Data></Cell>
+        <Cell><Data ss:Type="String">A young professional Arab man named Faris, 30 years old, clean beard, confident warm smile, navy blazer white shirt, medium close-up, visible lips, cinematic lighting, Sidi Bou Said blue white architecture in background, vertical 9:16, no text, no subtitles, no watermark, no extra people</Data></Cell>
+        <Cell><Data ss:Type="String">سيدي بوسعيد تونس | برامج سياحية فاخرة مع بلوفيا ترافل | #BlueviaTravel #SidiBouSaid #Tunisia</Data></Cell>
+        <Cell><Data ss:Type="String">high</Data></Cell>
+        <Cell><Data ss:Type="String">pending</Data></Cell>
+      </Row>
+
+      <!-- Sample Row 3 - Female - Cappadocia -->
+      <Row ss:Height="80" ss:StyleID="pending">
+        <Cell><Data ss:Type="String">BV-003</Data></Cell>
+        <Cell><Data ss:Type="String">شروق الشمس في كابادوكيا بين المناطيد الملونة — لحظة تستحق كل شيء</Data></Cell>
+        <Cell><Data ss:Type="String">turkey_cappadocia</Data></Cell>
+        <Cell><Data ss:Type="String">كابادوكيا</Data></Cell>
+        <Cell><Data ss:Type="String">female</Data></Cell>
+        <Cell><Data ss:Type="String">Cappadocia</Data></Cell>
+        <Cell><Data ss:Type="String">شروق الشمس في كابادوكيا بين المناطيد الملونة لحظة تستحق كل شيء. تجربة استثنائية تنتظرك مع بلوفيا ترافل — من الإقامة في الكهف الفاخر إلى رحلة المنطاد عند الفجر. احجزي مقعدك الآن عبر blueviatravel.com</Data></Cell>
+        <Cell><Data ss:Type="String">A young elegant Arab woman named Layla, 27 years old, wearing ivory silk hijab, warm confident smile, medium close-up, visible lips, soft cinematic lighting, Cappadocia hot air balloons sunrise in background, vertical 9:16, no text, no subtitles, no watermark, no extra people</Data></Cell>
+        <Cell><Data ss:Type="String">كابادوكيا — تجربة المناطيد الفاخرة مع بلوفيا ترافل | #BlueviaTravel #Cappadocia #Turkey</Data></Cell>
+        <Cell><Data ss:Type="String">high</Data></Cell>
+        <Cell><Data ss:Type="String">pending</Data></Cell>
+      </Row>
+
+      <!-- Sample Row 4 - Male - Mahdia -->
+      <Row ss:Height="80" ss:StyleID="pending">
+        <Cell><Data ss:Type="String">BV-004</Data></Cell>
+        <Cell><Data ss:Type="String">المهدية — شواطئ فيروزية هادئة تمنحك أعلى درجات الخصوصية والراحة</Data></Cell>
+        <Cell><Data ss:Type="String">tunisia_mahdia</Data></Cell>
+        <Cell><Data ss:Type="String">المهدية</Data></Cell>
+        <Cell><Data ss:Type="String">male</Data></Cell>
+        <Cell><Data ss:Type="String">Mahdia</Data></Cell>
+        <Cell><Data ss:Type="String">المهدية شواطئ فيروزية هادئة تمنحك أعلى درجات الخصوصية والراحة. الجو المثالي للعوائل والعرسان في رحلة أعدّها فريق بلوفيا ترافل بدقة واعتناء. اتصل بنا اليوم عبر واتساب أو blueviatravel.com</Data></Cell>
+        <Cell><Data ss:Type="String">A young professional Arab man named Faris, 30 years old, clean beard, confident warm smile, navy blazer white shirt, medium close-up, visible lips, cinematic lighting, Mahdia turquoise Mediterranean beach resort in background, vertical 9:16, no text, no subtitles, no watermark, no extra people</Data></Cell>
+        <Cell><Data ss:Type="String">المهدية تونس | شواطئ خاصة وبرامج فاخرة مع بلوفيا ترافل | #BlueviaTravel #Mahdia #Tunisia</Data></Cell>
+        <Cell><Data ss:Type="String">high</Data></Cell>
+        <Cell><Data ss:Type="String">pending</Data></Cell>
+      </Row>
+
+      <!-- Sample Row 5 - Female - Brand Trust -->
+      <Row ss:Height="80" ss:StyleID="pending">
+        <Cell><Data ss:Type="String">BV-005</Data></Cell>
+        <Cell><Data ss:Type="String">ليس مجرد رحلة — هو تجربة مصمّمة خصيصًا لك مع بلوفيا ترافل</Data></Cell>
+        <Cell><Data ss:Type="String">brand_trust</Data></Cell>
+        <Cell><Data ss:Type="String">عام</Data></Cell>
+        <Cell><Data ss:Type="String">female</Data></Cell>
+        <Cell><Data ss:Type="String">Luxury Travel</Data></Cell>
+        <Cell><Data ss:Type="String">ليس مجرد رحلة بل تجربة مصمّمة خصيصًا لك. في بلوفيا ترافل نؤمن أن سفرك يستحق أفضل ترتيب وأكثر لحظة راحة. تركيا وتونس في انتظارك — تواصل معنا اليوم عبر واتساب أو blueviatravel.com</Data></Cell>
+        <Cell><Data ss:Type="String">A young elegant Arab woman named Layla, 27 years old, wearing ivory silk hijab, warm confident smile, medium close-up, visible lips, soft cinematic lighting, luxury travel office with world map in background, vertical 9:16, no text, no subtitles, no watermark, no extra people</Data></Cell>
+        <Cell><Data ss:Type="String">بلوفيا ترافل — خبرة سياحية موثوقة إلى تركيا وتونس | #BlueviaTravel #LuxuryTravel #TurkeyTunisia</Data></Cell>
+        <Cell><Data ss:Type="String">medium</Data></Cell>
+        <Cell><Data ss:Type="String">pending</Data></Cell>
+      </Row>
+
+      <!-- Sample Row 6 - Male - Antalya -->
+      <Row ss:Height="80" ss:StyleID="pending">
+        <Cell><Data ss:Type="String">BV-006</Data></Cell>
+        <Cell><Data ss:Type="String">أنطاليا والبحر الأبيض المتوسط — استجمام كامل على الشاطئ الفيروزي</Data></Cell>
+        <Cell><Data ss:Type="String">turkey_antalya</Data></Cell>
+        <Cell><Data ss:Type="String">أنطاليا</Data></Cell>
+        <Cell><Data ss:Type="String">male</Data></Cell>
+        <Cell><Data ss:Type="String">Antalya</Data></Cell>
+        <Cell><Data ss:Type="String">أنطاليا والبحر الأبيض المتوسط استجمام كامل على شاطئ فيروزي لا مثيل له. منتجعات فاخرة وخدمة خاصة من أول يوم حتى آخر يوم تنظمها لك بلوفيا ترافل. احجز اليوم عبر واتساب أو blueviatravel.com</Data></Cell>
+        <Cell><Data ss:Type="String">A young professional Arab man named Faris, 30 years old, clean beard, confident warm smile, navy blazer white shirt, medium close-up, visible lips, cinematic lighting, Antalya Mediterranean luxury beach resort in background, vertical 9:16, no text, no subtitles, no watermark, no extra people</Data></Cell>
+        <Cell><Data ss:Type="String">أنطاليا تركيا | شواطئ فاخرة مع بلوفيا ترافل | #BlueviaTravel #Antalya #Turkey</Data></Cell>
+        <Cell><Data ss:Type="String">high</Data></Cell>
+        <Cell><Data ss:Type="String">pending</Data></Cell>
+      </Row>
+    </Table>
+  </Worksheet>
+
+  <!-- ======================================================= -->
+  <!-- SHEET 2: logs — سجل تنفيذ الفيديوهات                    -->
+  <!-- ======================================================= -->
+  <Worksheet ss:Name="logs">
+    <Table ss:DefaultRowHeight="20">
+      <Column ss:Width="160"/>
+      <Column ss:Width="80"/>
+      <Column ss:Width="80"/>
+      <Column ss:Width="100"/>
+      <Column ss:Width="200"/>
+      <Column ss:Width="100"/>
+      <Column ss:Width="200"/>
+      <Column ss:Width="200"/>
+      <Column ss:Width="120"/>
+      <Column ss:Width="200"/>
+
+      <Row ss:Height="30">
+        <Cell ss:StyleID="header"><Data ss:Type="String">timestamp</Data></Cell>
+        <Cell ss:StyleID="header"><Data ss:Type="String">job_id</Data></Cell>
+        <Cell ss:StyleID="header"><Data ss:Type="String">idea_id</Data></Cell>
+        <Cell ss:StyleID="header"><Data ss:Type="String">character</Data></Cell>
+        <Cell ss:StyleID="header"><Data ss:Type="String">topic</Data></Cell>
+        <Cell ss:StyleID="header"><Data ss:Type="String">action</Data></Cell>
+        <Cell ss:StyleID="header"><Data ss:Type="String">video_url</Data></Cell>
+        <Cell ss:StyleID="header"><Data ss:Type="String">youtube_url</Data></Cell>
+        <Cell ss:StyleID="header"><Data ss:Type="String">blotato_post_id</Data></Cell>
+        <Cell ss:StyleID="header"><Data ss:Type="String">notes</Data></Cell>
+      </Row>
+    </Table>
+  </Worksheet>
+
+  <!-- ======================================================= -->
+  <!-- SHEET 3: config — إعدادات النظام                        -->
+  <!-- ======================================================= -->
+  <Worksheet ss:Name="config">
+    <Table ss:DefaultRowHeight="20">
+      <Column ss:Width="200"/>
+      <Column ss:Width="300"/>
+      <Column ss:Width="300"/>
+
+      <Row ss:Height="30">
+        <Cell ss:StyleID="header"><Data ss:Type="String">key</Data></Cell>
+        <Cell ss:StyleID="header"><Data ss:Type="String">value</Data></Cell>
+        <Cell ss:StyleID="header"><Data ss:Type="String">description</Data></Cell>
+      </Row>
+      <Row>
+        <Cell><Data ss:Type="String">cycle_counter</Data></Cell>
+        <Cell><Data ss:Type="Number">0</Data></Cell>
+        <Cell><Data ss:Type="String">عداد الدورات — يزيد بـ 1 كل 3 أيام. زوجي = أنثى، فردي = ذكر</Data></Cell>
+      </Row>
+      <Row>
+        <Cell><Data ss:Type="String">last_character</Data></Cell>
+        <Cell><Data ss:Type="String">female</Data></Cell>
+        <Cell><Data ss:Type="String">آخر شخصية استُخدمت: female أو male</Data></Cell>
+      </Row>
+      <Row>
+        <Cell><Data ss:Type="String">female_image_url</Data></Cell>
+        <Cell><Data ss:Type="String">https://YOUR-LAYLA-IMAGE-URL.jpg</Data></Cell>
+        <Cell><Data ss:Type="String">رابط صورة الأفاتار الأنثوي (ليلى) — يُحمل إلى Drive ثم يُستخدم في KIE</Data></Cell>
+      </Row>
+      <Row>
+        <Cell><Data ss:Type="String">male_image_url</Data></Cell>
+        <Cell><Data ss:Type="String">https://YOUR-FARIS-IMAGE-URL.jpg</Data></Cell>
+        <Cell><Data ss:Type="String">رابط صورة الأفاتار الذكوري (فارس) — يُحمل إلى Drive ثم يُستخدم في KIE</Data></Cell>
+      </Row>
+      <Row>
+        <Cell><Data ss:Type="String">elevenlabs_voice_female</Data></Cell>
+        <Cell><Data ss:Type="String">EXAVITQu4vr4xnSDxMaL</Data></Cell>
+        <Cell><Data ss:Type="String">معرّف صوت ElevenLabs للشخصية الأنثوية (ليلى)</Data></Cell>
+      </Row>
+      <Row>
+        <Cell><Data ss:Type="String">elevenlabs_voice_male</Data></Cell>
+        <Cell><Data ss:Type="String">onwK4e9ZLuTAKqWW03F9</Data></Cell>
+        <Cell><Data ss:Type="String">معرّف صوت ElevenLabs للشخصية الذكورية (فارس)</Data></Cell>
+      </Row>
+      <Row>
+        <Cell><Data ss:Type="String">kie_bearer_token</Data></Cell>
+        <Cell><Data ss:Type="String">332f195f0e9cc79276f8a483b359de8d</Data></Cell>
+        <Cell><Data ss:Type="String">رمز KIE Bearer Token لحساب بلوفيا</Data></Cell>
+      </Row>
+      <Row>
+        <Cell><Data ss:Type="String">blotato_tiktok_account</Data></Cell>
+        <Cell><Data ss:Type="Number">42676</Data></Cell>
+        <Cell><Data ss:Type="String">معرّف حساب TikTok في Blotato (bluevia_travel)</Data></Cell>
+      </Row>
+      <Row>
+        <Cell><Data ss:Type="String">blotato_instagram_account</Data></Cell>
+        <Cell><Data ss:Type="Number">47564</Data></Cell>
+        <Cell><Data ss:Type="String">معرّف حساب Instagram في Blotato (bluevia.travel)</Data></Cell>
+      </Row>
+      <Row>
+        <Cell><Data ss:Type="String">blotato_facebook_account</Data></Cell>
+        <Cell><Data ss:Type="Number">32251</Data></Cell>
+        <Cell><Data ss:Type="String">معرّف حساب Facebook في Blotato</Data></Cell>
+      </Row>
+      <Row>
+        <Cell><Data ss:Type="String">blotato_facebook_page</Data></Cell>
+        <Cell><Data ss:Type="Number">772644459275664</Data></Cell>
+        <Cell><Data ss:Type="String">معرّف صفحة Facebook</Data></Cell>
+      </Row>
+      <Row>
+        <Cell><Data ss:Type="String">blotato_twitter_account</Data></Cell>
+        <Cell><Data ss:Type="Number">38</Data></Cell>
+        <Cell><Data ss:Type="String">معرّف حساب X/Twitter في Blotato</Data></Cell>
+      </Row>
+      <Row>
+        <Cell><Data ss:Type="String">blotato_threads_account</Data></Cell>
+        <Cell><Data ss:Type="Number">3</Data></Cell>
+        <Cell><Data ss:Type="String">معرّف حساب Threads في Blotato</Data></Cell>
+      </Row>
+      <Row>
+        <Cell><Data ss:Type="String">blotato_youtube_account</Data></Cell>
+        <Cell><Data ss:Type="Number">111</Data></Cell>
+        <Cell><Data ss:Type="String">معرّف حساب YouTube في Blotato (bluevia_travel)</Data></Cell>
+      </Row>
+      <Row>
+        <Cell><Data ss:Type="String">whatsapp_number</Data></Cell>
+        <Cell><Data ss:Type="String">905068668849</Data></Cell>
+        <Cell><Data ss:Type="String">رقم واتساب بلوفيا ترافل</Data></Cell>
+      </Row>
+      <Row>
+        <Cell><Data ss:Type="String">website</Data></Cell>
+        <Cell><Data ss:Type="String">blueviatravel.com</Data></Cell>
+        <Cell><Data ss:Type="String">موقع الشركة</Data></Cell>
+      </Row>
+      <Row>
+        <Cell><Data ss:Type="String">video_duration_target</Data></Cell>
+        <Cell><Data ss:Type="Number">12</Data></Cell>
+        <Cell><Data ss:Type="String">مدة الفيديو المستهدفة بالثواني</Data></Cell>
+      </Row>
+      <Row>
+        <Cell><Data ss:Type="String">cycle_days</Data></Cell>
+        <Cell><Data ss:Type="Number">3</Data></Cell>
+        <Cell><Data ss:Type="String">عدد الأيام بين كل فيديو</Data></Cell>
+      </Row>
+    </Table>
+  </Worksheet>
+
+</Workbook>
